@@ -180,10 +180,56 @@ def test_weekly_review_suggestion(monkeypatch) -> None:
     assert data["summary"]["total_amount"] == "8.00"
 
 
+def create_habit(
+    *,
+    name: str,
+    start_date: str,
+    end_date: str | None = None,
+    interval: int = 1,
+    unit: str = "day",
+) -> dict:
+    payload = {
+        "name": name,
+        "start_date": start_date,
+        "interval": interval,
+        "unit": unit,
+    }
+    if end_date is not None:
+        payload["end_date"] = end_date
+
+    response = client.post("/api/habits", json=payload)
+    assert response.status_code == 201
+    return response.json()
+
+
+def test_habits_for_date_weekly_interval() -> None:
+    habit = create_habit(
+        name="Gym",
+        start_date="2024-01-01",
+        interval=2,
+        unit="week",
+    )
+    habit_id = habit["id"]
+
+    due_response = client.get("/api/habits/for-date?date=2024-01-01")
+    assert due_response.status_code == 200
+    due_ids = {item["id"] for item in due_response.json()}
+    assert habit_id in due_ids
+
+    not_due_response = client.get("/api/habits/for-date?date=2024-01-08")
+    assert not_due_response.status_code == 200
+    not_due_ids = {item["id"] for item in not_due_response.json()}
+    assert habit_id not in not_due_ids
+
+    due_again_response = client.get("/api/habits/for-date?date=2024-01-15")
+    assert due_again_response.status_code == 200
+    due_again_ids = {item["id"] for item in due_again_response.json()}
+    assert habit_id in due_again_ids
+
+
 def test_habits_toggle_and_completions() -> None:
-    create_response = client.post("/api/habits", json={"name": "Drink water"})
-    assert create_response.status_code == 201
-    habit_id = create_response.json()["id"]
+    habit = create_habit(name="Drink water", start_date="2024-02-01")
+    habit_id = habit["id"]
 
     list_response = client.get("/api/habits")
     assert list_response.status_code == 200
@@ -198,6 +244,13 @@ def test_habits_toggle_and_completions() -> None:
     assert toggle_on.status_code == 200
     assert toggle_on.json()["status"] == "checked"
 
+    due_response = client.get(f"/api/habits/for-date?date={date_str}")
+    assert due_response.status_code == 200
+    due_entry = next(
+        item for item in due_response.json() if item["id"] == habit_id
+    )
+    assert due_entry["checked"] is True
+
     completions = client.get(f"/api/habits/completions?date={date_str}")
     assert completions.status_code == 200
     data = completions.json()
@@ -211,9 +264,51 @@ def test_habits_toggle_and_completions() -> None:
     assert toggle_off.status_code == 200
     assert toggle_off.json()["status"] == "unchecked"
 
+    due_after = client.get(f"/api/habits/for-date?date={date_str}")
+    assert due_after.status_code == 200
+    due_after_entry = next(
+        item for item in due_after.json() if item["id"] == habit_id
+    )
+    assert due_after_entry["checked"] is False
+
     completions_after = client.get(f"/api/habits/completions?date={date_str}")
     assert completions_after.status_code == 200
     assert completions_after.json()["completed_habit_ids"] == []
+
+
+def test_habit_toggle_non_due_date() -> None:
+    habit = create_habit(
+        name="Stretch",
+        start_date="2024-01-01",
+        interval=1,
+        unit="week",
+    )
+    response = client.post(
+        f"/api/habits/{habit['id']}/toggle",
+        json={"date": "2024-01-02"},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Habit not scheduled for this date"
+
+
+def test_habits_monthly_last_day_rule() -> None:
+    habit = create_habit(
+        name="Pay rent",
+        start_date="2024-01-31",
+        interval=1,
+        unit="month",
+    )
+    habit_id = habit["id"]
+
+    due_response = client.get("/api/habits/for-date?date=2024-02-29")
+    assert due_response.status_code == 200
+    due_ids = {item["id"] for item in due_response.json()}
+    assert habit_id in due_ids
+
+    not_due_response = client.get("/api/habits/for-date?date=2024-02-28")
+    assert not_due_response.status_code == 200
+    not_due_ids = {item["id"] for item in not_due_response.json()}
+    assert habit_id not in not_due_ids
 
 
 def test_habit_toggle_unknown_habit() -> None:

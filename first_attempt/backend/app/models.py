@@ -3,9 +3,11 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    CheckConstraint,
     Date,
     DateTime,
     ForeignKey,
+    Integer,
     Numeric,
     String,
     Text,
@@ -103,9 +105,24 @@ class Transaction(Base):
 
 class Habit(Base):
     __tablename__ = "habits"
+    __table_args__ = (
+        CheckConstraint("interval >= 1", name="ck_habits_interval_positive"),
+        CheckConstraint(
+            "unit IN ('day','week','month')",
+            name="ck_habits_unit_allowed",
+        ),
+        CheckConstraint(
+            "end_date IS NULL OR end_date >= start_date",
+            name="ck_habits_end_date_after_start",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(Text(), nullable=False)
+    start_date: Mapped[date] = mapped_column(Date(), nullable=False)
+    end_date: Mapped[date | None] = mapped_column(Date(), nullable=True)
+    interval: Mapped[int] = mapped_column(Integer(), nullable=False)
+    unit: Mapped[str] = mapped_column(Text(), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

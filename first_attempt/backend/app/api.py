@@ -1,3 +1,4 @@
+import calendar
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 from uuid import UUID
@@ -13,6 +14,7 @@ from app.schemas import (
     CategoryOut,
     HabitCompletionsOut,
     HabitCreate,
+    HabitForDateOut,
     HabitOut,
     HabitToggleIn,
     HabitToggleOut,
@@ -25,6 +27,42 @@ from app.schemas import (
 )
 
 router = APIRouter()
+
+
+def _days_in_month(year: int, month: int) -> int:
+    return calendar.monthrange(year, month)[1]
+
+
+def _is_habit_due(habit: Habit, target_date: date) -> bool:
+    if target_date < habit.start_date:
+        return False
+    if habit.end_date and target_date > habit.end_date:
+        return False
+    if habit.interval < 1:
+        return False
+
+    if habit.unit == "day":
+        delta_days = (target_date - habit.start_date).days
+        return delta_days % habit.interval == 0
+
+    if habit.unit == "week":
+        delta_days = (target_date - habit.start_date).days
+        return delta_days % (7 * habit.interval) == 0
+
+    if habit.unit == "month":
+        month_diff = (
+            (target_date.year - habit.start_date.year) * 12
+            + (target_date.month - habit.start_date.month)
+        )
+        if month_diff % habit.interval != 0:
+            return False
+        due_day = min(
+            habit.start_date.day,
+            _days_in_month(target_date.year, target_date.month),
+        )
+        return target_date.day == due_day
+
+    return False
 
 
 @router.get("/categories", response_model=list[CategoryOut])
@@ -112,7 +150,13 @@ def create_habit(
     payload: HabitCreate,
     db: Session = Depends(get_db),
 ) -> HabitOut:
-    habit = Habit(name=payload.name)
+    habit = Habit(
+        name=payload.name,
+        start_date=payload.start_date,
+        end_date=payload.end_date,
+        interval=payload.interval,
+        unit=payload.unit,
+    )
     db.add(habit)
     db.commit()
     db.refresh(habit)
@@ -134,6 +178,35 @@ def list_habit_completions(
     return HabitCompletionsOut(date=date, completed_habit_ids=completed_ids)
 
 
+@router.get("/habits/for-date", response_model=list[HabitForDateOut])
+def list_habits_for_date(
+    date: date = Query(..., description="YYYY-MM-DD"),
+    db: Session = Depends(get_db),
+) -> list[HabitForDateOut]:
+    habits = db.execute(select(Habit).order_by(Habit.name)).scalars().all()
+    due_habits = [habit for habit in habits if _is_habit_due(habit, date)]
+    completed_ids = set(
+        db.execute(
+            select(HabitCompletion.habit_id).where(HabitCompletion.date == date)
+        )
+        .scalars()
+        .all()
+    )
+
+    return [
+        HabitForDateOut(
+            id=habit.id,
+            name=habit.name,
+            start_date=habit.start_date,
+            end_date=habit.end_date,
+            interval=habit.interval,
+            unit=habit.unit,
+            checked=habit.id in completed_ids,
+        )
+        for habit in due_habits
+    ]
+
+
 @router.post("/habits/{habit_id}/toggle", response_model=HabitToggleOut)
 def toggle_habit_completion(
     habit_id: UUID,
@@ -143,6 +216,11 @@ def toggle_habit_completion(
     habit = db.get(Habit, habit_id)
     if habit is None:
         raise HTTPException(status_code=404, detail="Habit not found")
+    if not _is_habit_due(habit, payload.date):
+        raise HTTPException(
+            status_code=400,
+            detail="Habit not scheduled for this date",
+        )
 
     completion = (
         db.execute(

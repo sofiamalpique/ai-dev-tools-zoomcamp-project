@@ -2,7 +2,9 @@ from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class CategoryOut(BaseModel):
@@ -49,11 +51,25 @@ class TransactionOut(TransactionBase):
 
 class HabitCreate(BaseModel):
     name: str
+    start_date: date
+    end_date: date | None = None
+    interval: int = Field(1, ge=1)
+    unit: Literal["day", "week", "month"] = "day"
+
+    @model_validator(mode="after")
+    def validate_dates(self) -> "HabitCreate":
+        if self.end_date and self.end_date < self.start_date:
+            raise ValueError("end_date must be on or after start_date")
+        return self
 
 
 class HabitOut(BaseModel):
     id: UUID
     name: str
+    start_date: date
+    end_date: date | None
+    interval: int
+    unit: Literal["day", "week", "month"]
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -70,6 +86,16 @@ class HabitToggleIn(BaseModel):
 
 class HabitToggleOut(BaseModel):
     status: str
+
+
+class HabitForDateOut(BaseModel):
+    id: UUID
+    name: str
+    start_date: date
+    end_date: date | None
+    interval: int
+    unit: Literal["day", "week", "month"]
+    checked: bool
 
 
 class WeeklyReviewCategoryOut(BaseModel):
