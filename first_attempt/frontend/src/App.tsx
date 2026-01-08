@@ -2,11 +2,36 @@ import { useEffect, useState } from "react";
 
 const BACKEND_URL = "http://localhost:8000/health";
 const MCP_URL = "http://localhost:8001/health";
+const API_BASE_URL = "http://localhost:8000";
+const CATEGORIES_URL = `${API_BASE_URL}/api/categories`;
+const TRANSACTIONS_URL = `${API_BASE_URL}/api/transactions`;
 
 type HealthState = {
   ok: boolean | null;
   data: unknown | null;
   error: string | null;
+};
+
+type ListState<T> = {
+  data: T[] | null;
+  loading: boolean;
+  error: string | null;
+};
+
+type Category = {
+  id: string;
+  name: string;
+  kind: string;
+  created_at: string;
+};
+
+type Transaction = {
+  id: string;
+  amount: string;
+  occurred_at: string;
+  description: string | null;
+  category_id: string;
+  created_at: string;
 };
 
 const initialState: HealthState = {
@@ -68,6 +93,57 @@ const useHealthCheck = (url: string) => {
   return state;
 };
 
+const useList = <T,>(url: string) => {
+  const [state, setState] = useState<ListState<T>>({
+    data: null,
+    loading: true,
+    error: null,
+  });
+
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!active) {
+          return;
+        }
+
+        if (!response.ok) {
+          setState({
+            data: null,
+            loading: false,
+            error: data?.detail ?? "Request failed.",
+          });
+          return;
+        }
+
+        setState({ data, loading: false, error: null });
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+        setState({
+          data: null,
+          loading: false,
+          error: error instanceof Error ? error.message : "Request failed.",
+        });
+      }
+    };
+
+    load();
+
+    return () => {
+      active = false;
+    };
+  }, [url]);
+
+  return state;
+};
+
 const HealthCard = ({
   label,
   url,
@@ -95,6 +171,8 @@ const HealthCard = ({
 function App() {
   const backend = useHealthCheck(BACKEND_URL);
   const mcp = useHealthCheck(MCP_URL);
+  const categories = useList<Category>(CATEGORIES_URL);
+  const transactions = useList<Transaction>(TRANSACTIONS_URL);
 
   return (
     <div className="page">
@@ -109,6 +187,70 @@ function App() {
       <section className="status-grid">
         <HealthCard label="Backend" url={BACKEND_URL} state={backend} />
         <HealthCard label="MCP" url={MCP_URL} state={mcp} />
+      </section>
+
+      <section className="data-section">
+        <h2 className="section-title">Categories</h2>
+        <article className="status-card">
+          {categories.loading && <p className="hint">Loading categories...</p>}
+          {categories.error && (
+            <p className="error-text">Error: {categories.error}</p>
+          )}
+          {!categories.loading &&
+            !categories.error &&
+            (categories.data?.length ? (
+              <ul className="data-list">
+                {categories.data.map((category) => (
+                  <li className="data-item" key={category.id}>
+                    <div className="item-row">
+                      <span className="item-primary">{category.name}</span>
+                      <span className="item-secondary">{category.kind}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="hint">No categories yet.</p>
+            ))}
+        </article>
+      </section>
+
+      <section className="data-section">
+        <h2 className="section-title">Transactions</h2>
+        <article className="status-card">
+          {transactions.loading && (
+            <p className="hint">Loading transactions...</p>
+          )}
+          {transactions.error && (
+            <p className="error-text">Error: {transactions.error}</p>
+          )}
+          {!transactions.loading &&
+            !transactions.error &&
+            (transactions.data?.length ? (
+              <ul className="data-list">
+                {transactions.data.map((transaction) => (
+                  <li className="data-item" key={transaction.id}>
+                    <div className="item-row">
+                      <span className="item-primary">
+                        {transaction.occurred_at}
+                      </span>
+                      <span className="item-secondary">
+                        {transaction.amount}
+                      </span>
+                    </div>
+                    <p className="item-muted">
+                      {transaction.description ?? "No description"}
+                    </p>
+                    <p className="item-muted">
+                      Category: {transaction.category_id}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="hint">No transactions yet.</p>
+            ))}
+        </article>
       </section>
     </div>
   );
