@@ -11,6 +11,7 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 sys.path.append(str(BASE_DIR))
 
 from app.db import Base, get_database_url  # noqa: E402
+import app.models  # noqa: E402,F401
 
 config = context.config
 
