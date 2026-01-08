@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 const BACKEND_URL = "http://localhost:8000/health";
 const MCP_URL = "http://localhost:8001/health";
@@ -93,7 +93,7 @@ const useHealthCheck = (url: string) => {
   return state;
 };
 
-const useList = <T,>(url: string) => {
+const useList = <T,>(url: string, refreshKey = 0) => {
   const [state, setState] = useState<ListState<T>>({
     data: null,
     loading: true,
@@ -139,7 +139,7 @@ const useList = <T,>(url: string) => {
     return () => {
       active = false;
     };
-  }, [url]);
+  }, [url, refreshKey]);
 
   return state;
 };
@@ -171,8 +171,46 @@ const HealthCard = ({
 function App() {
   const backend = useHealthCheck(BACKEND_URL);
   const mcp = useHealthCheck(MCP_URL);
-  const categories = useList<Category>(CATEGORIES_URL);
+  const [categoriesRefresh, setCategoriesRefresh] = useState(0);
+  const [categoryName, setCategoryName] = useState("");
+  const [categoryKind, setCategoryKind] = useState("house");
+  const [categoryError, setCategoryError] = useState<string | null>(null);
+  const categories = useList<Category>(CATEGORIES_URL, categoriesRefresh);
   const transactions = useList<Transaction>(TRANSACTIONS_URL);
+
+  const handleCategorySubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmedName = categoryName.trim();
+
+    if (!trimmedName) {
+      setCategoryError("Name is required.");
+      return;
+    }
+
+    setCategoryError(null);
+
+    try {
+      const response = await fetch(CATEGORIES_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmedName, kind: categoryKind }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setCategoryError(data?.detail ?? "Failed to create category.");
+        return;
+      }
+
+      setCategoryName("");
+      setCategoryKind("house");
+      setCategoriesRefresh((value) => value + 1);
+    } catch (error) {
+      setCategoryError(
+        error instanceof Error ? error.message : "Failed to create category."
+      );
+    }
+  };
 
   return (
     <div className="page">
@@ -191,6 +229,38 @@ function App() {
 
       <section className="data-section">
         <h2 className="section-title">Categories</h2>
+        <form className="form-card" onSubmit={handleCategorySubmit}>
+          <div className="form-grid">
+            <label className="form-field">
+              <span className="form-label">Name</span>
+              <input
+                type="text"
+                value={categoryName}
+                onChange={(event) => setCategoryName(event.target.value)}
+                placeholder="e.g. Groceries"
+              />
+            </label>
+            <label className="form-field">
+              <span className="form-label">Kind</span>
+              <select
+                value={categoryKind}
+                onChange={(event) => setCategoryKind(event.target.value)}
+              >
+                <option value="house">house</option>
+                <option value="health">health</option>
+                <option value="supermarket">supermarket</option>
+                <option value="fun">fun</option>
+                <option value="subscriptions">subscriptions</option>
+              </select>
+            </label>
+          </div>
+          <div className="form-actions">
+            <button type="submit">Add category</button>
+            {categoryError && (
+              <span className="error-text">{categoryError}</span>
+            )}
+          </div>
+        </form>
         <article className="status-card">
           {categories.loading && <p className="hint">Loading categories...</p>}
           {categories.error && (
