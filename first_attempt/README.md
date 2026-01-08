@@ -46,9 +46,25 @@ curl http://localhost:8000/api/labels
 
 curl -X POST http://localhost:8000/api/transactions \
   -H "Content-Type: application/json" \
-  -d '{"amount":"42.50","occurred_at":"2024-01-01T10:00:00Z","description":"Weekly shop","label_id":"<label-uuid>"}'
+  -d '{"amount":"42.50","occurred_at":"2024-01-01","description":"Weekly shop","label_id":"<label-uuid>"}'
 
 curl http://localhost:8000/api/transactions
+```
+
+## Habits
+
+```bash
+curl http://localhost:8000/api/habits
+
+curl -X POST http://localhost:8000/api/habits \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Drink water"}'
+
+curl "http://localhost:8000/api/habits/completions?date=2024-01-01"
+
+curl -X POST http://localhost:8000/api/habits/<habit-uuid>/toggle \
+  -H "Content-Type: application/json" \
+  -d '{"date":"2024-01-01"}'
 ```
 
 ## Weekly review

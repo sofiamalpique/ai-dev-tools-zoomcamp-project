@@ -2,7 +2,16 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String, Text, func
+from sqlalchemy import (
+    Date,
+    DateTime,
+    ForeignKey,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import CHAR, TypeDecorator
@@ -90,3 +99,46 @@ class Transaction(Base):
     )
 
     label: Mapped[Label] = relationship(back_populates="transactions")
+
+
+class Habit(Base):
+    __tablename__ = "habits"
+
+    id: Mapped[uuid.UUID] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(Text(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    completions: Mapped[list["HabitCompletion"]] = relationship(
+        back_populates="habit",
+        cascade="all, delete-orphan",
+    )
+
+
+class HabitCompletion(Base):
+    __tablename__ = "habit_completions"
+    __table_args__ = (
+        UniqueConstraint(
+            "habit_id",
+            "date",
+            name="uq_habit_completions_habit_id_date",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4)
+    habit_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(),
+        ForeignKey("habits.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    date: Mapped[date] = mapped_column(Date(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    habit: Mapped[Habit] = relationship(back_populates="completions")

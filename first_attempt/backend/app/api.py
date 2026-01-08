@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
+from uuid import UUID
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -7,9 +8,14 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Category, Label, Transaction
+from app.models import Category, Habit, HabitCompletion, Label, Transaction
 from app.schemas import (
     CategoryOut,
+    HabitCompletionsOut,
+    HabitCreate,
+    HabitOut,
+    HabitToggleIn,
+    HabitToggleOut,
     LabelCreate,
     LabelOut,
     TransactionCreate,
@@ -89,6 +95,73 @@ def create_transaction(
     db.commit()
     db.refresh(transaction)
     return transaction
+
+
+@router.get("/habits", response_model=list[HabitOut])
+def list_habits(db: Session = Depends(get_db)) -> list[HabitOut]:
+    habits = db.execute(select(Habit).order_by(Habit.name)).scalars().all()
+    return habits
+
+
+@router.post(
+    "/habits",
+    response_model=HabitOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_habit(
+    payload: HabitCreate,
+    db: Session = Depends(get_db),
+) -> HabitOut:
+    habit = Habit(name=payload.name)
+    db.add(habit)
+    db.commit()
+    db.refresh(habit)
+    return habit
+
+
+@router.get("/habits/completions", response_model=HabitCompletionsOut)
+def list_habit_completions(
+    date: date = Query(..., description="YYYY-MM-DD"),
+    db: Session = Depends(get_db),
+) -> HabitCompletionsOut:
+    completed_ids = (
+        db.execute(
+            select(HabitCompletion.habit_id).where(HabitCompletion.date == date)
+        )
+        .scalars()
+        .all()
+    )
+    return HabitCompletionsOut(date=date, completed_habit_ids=completed_ids)
+
+
+@router.post("/habits/{habit_id}/toggle", response_model=HabitToggleOut)
+def toggle_habit_completion(
+    habit_id: UUID,
+    payload: HabitToggleIn,
+    db: Session = Depends(get_db),
+) -> HabitToggleOut:
+    habit = db.get(Habit, habit_id)
+    if habit is None:
+        raise HTTPException(status_code=404, detail="Habit not found")
+
+    completion = (
+        db.execute(
+            select(HabitCompletion).where(
+                HabitCompletion.habit_id == habit_id,
+                HabitCompletion.date == payload.date,
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if completion:
+        db.delete(completion)
+        db.commit()
+        return HabitToggleOut(status="unchecked")
+
+    db.add(HabitCompletion(habit_id=habit_id, date=payload.date))
+    db.commit()
+    return HabitToggleOut(status="checked")
 
 
 def _format_amount(value: Decimal | None) -> str:

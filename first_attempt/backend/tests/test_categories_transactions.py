@@ -178,3 +178,47 @@ def test_weekly_review_suggestion(monkeypatch) -> None:
     data = response.json()
     assert data["suggestion"] == "Test suggestion"
     assert data["summary"]["total_amount"] == "8.00"
+
+
+def test_habits_toggle_and_completions() -> None:
+    create_response = client.post("/api/habits", json={"name": "Drink water"})
+    assert create_response.status_code == 201
+    habit_id = create_response.json()["id"]
+
+    list_response = client.get("/api/habits")
+    assert list_response.status_code == 200
+    habit_ids = {item["id"] for item in list_response.json()}
+    assert habit_id in habit_ids
+
+    date_str = "2024-02-01"
+    toggle_on = client.post(
+        f"/api/habits/{habit_id}/toggle",
+        json={"date": date_str},
+    )
+    assert toggle_on.status_code == 200
+    assert toggle_on.json()["status"] == "checked"
+
+    completions = client.get(f"/api/habits/completions?date={date_str}")
+    assert completions.status_code == 200
+    data = completions.json()
+    assert data["date"] == date_str
+    assert habit_id in data["completed_habit_ids"]
+
+    toggle_off = client.post(
+        f"/api/habits/{habit_id}/toggle",
+        json={"date": date_str},
+    )
+    assert toggle_off.status_code == 200
+    assert toggle_off.json()["status"] == "unchecked"
+
+    completions_after = client.get(f"/api/habits/completions?date={date_str}")
+    assert completions_after.status_code == 200
+    assert completions_after.json()["completed_habit_ids"] == []
+
+
+def test_habit_toggle_unknown_habit() -> None:
+    response = client.post(
+        f"/api/habits/{uuid4()}/toggle",
+        json={"date": "2024-02-01"},
+    )
+    assert response.status_code == 404

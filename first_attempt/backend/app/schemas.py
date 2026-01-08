@@ -47,6 +47,31 @@ class TransactionOut(TransactionBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class HabitCreate(BaseModel):
+    name: str
+
+
+class HabitOut(BaseModel):
+    id: UUID
+    name: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class HabitCompletionsOut(BaseModel):
+    date: date
+    completed_habit_ids: list[UUID]
+
+
+class HabitToggleIn(BaseModel):
+    date: date
+
+
+class HabitToggleOut(BaseModel):
+    status: str
+
+
 class WeeklyReviewCategoryOut(BaseModel):
     category_key: str
     total_amount: str
