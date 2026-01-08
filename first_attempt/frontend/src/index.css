@@ -191,6 +191,10 @@ h1 {
   margin-bottom: 12px;
 }
 
+.review-suggestion {
+  margin-top: 12px;
+}
+
 .item-primary {
   font-size: 0.95rem;
 }

@@ -6,7 +6,7 @@ const API_BASE_URL = "http://localhost:8000";
 const CATEGORIES_URL = `${API_BASE_URL}/api/categories`;
 const LABELS_URL = `${API_BASE_URL}/api/labels`;
 const TRANSACTIONS_URL = `${API_BASE_URL}/api/transactions`;
-const WEEKLY_REVIEW_URL = `${API_BASE_URL}/api/reviews/weekly`;
+const WEEKLY_REVIEW_URL = `${API_BASE_URL}/api/reviews/weekly/suggestion`;
 
 type HealthState = {
   ok: boolean | null;
@@ -47,11 +47,18 @@ type WeeklyReviewCategory = {
   total_amount: string;
 };
 
-type WeeklyReview = {
+type WeeklyReviewSummary = {
   start_date: string;
   end_date: string;
   total_amount: string;
   by_category: WeeklyReviewCategory[];
+};
+
+type WeeklyReviewSuggestion = {
+  start_date: string;
+  end_date: string;
+  summary: WeeklyReviewSummary;
+  suggestion: string;
 };
 
 const initialState: HealthState = {
@@ -223,7 +230,9 @@ function App() {
   );
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
-  const [reviewData, setReviewData] = useState<WeeklyReview | null>(null);
+  const [reviewData, setReviewData] = useState<WeeklyReviewSuggestion | null>(
+    null
+  );
 
   useEffect(() => {
     if (!labelCategoryId && categories.data?.length) {
@@ -512,11 +521,13 @@ function App() {
             <>
               <div className="item-row review-summary">
                 <span className="item-primary">Total</span>
-                <span className="item-secondary">{reviewData.total_amount}</span>
+                <span className="item-secondary">
+                  {reviewData.summary.total_amount}
+                </span>
               </div>
-              {reviewData.by_category.length ? (
+              {reviewData.summary.by_category.length ? (
                 <ul className="data-list">
-                  {reviewData.by_category.map((entry) => (
+                  {reviewData.summary.by_category.map((entry) => (
                     <li className="data-item" key={entry.category_key}>
                       <div className="item-row">
                         <span className="item-primary">
@@ -532,6 +543,13 @@ function App() {
               ) : (
                 <p className="hint">No category totals for this range.</p>
               )}
+              <div className="review-suggestion">
+                <p className="hint">Weekly suggestion</p>
+                <p className="item-muted">
+                  {reviewData.suggestion?.trim() ||
+                    "No suggestion yet. Try another range."}
+                </p>
+              </div>
             </>
           ) : (
             <p className="hint">Run a review to see totals.</p>
