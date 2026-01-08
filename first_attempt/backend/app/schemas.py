@@ -57,3 +57,10 @@ class WeeklyReviewOut(BaseModel):
     end_date: date
     total_amount: str
     by_category: list[WeeklyReviewCategoryOut]
+
+
+class WeeklyReviewSuggestionOut(BaseModel):
+    start_date: date
+    end_date: date
+    summary: WeeklyReviewOut
+    suggestion: str

@@ -55,6 +55,7 @@ curl http://localhost:8000/api/transactions
 
 ```bash
 curl "http://localhost:8000/api/reviews/weekly?start_date=2024-01-01&end_date=2024-01-07"
+curl "http://localhost:8000/api/reviews/weekly/suggestion?start_date=2024-01-01&end_date=2024-01-07"
 ```
 
 ## Backend API docs

@@ -8,6 +8,7 @@ from sqlalchemy.pool import StaticPool
 from app.db import Base, get_db
 from app.main import app as fastapi_app
 from app.models import Category
+import app.api as api_module
 import app.models  # noqa: F401
 
 SQLALCHEMY_DATABASE_URL = "sqlite+pysqlite:///:memory:"
@@ -140,3 +141,40 @@ def test_weekly_review_totals() -> None:
 
     by_category = {item["category_key"]: item for item in data["by_category"]}
     assert by_category["supermarket"]["total_amount"] == "15.50"
+
+
+def test_weekly_review_suggestion(monkeypatch) -> None:
+    categories = client.get("/api/categories").json()
+    supermarket = next(
+        item for item in categories if item["key"] == "supermarket"
+    )
+
+    label_response = client.post(
+        "/api/labels",
+        json={"label": "Groceries", "category_id": supermarket["id"]},
+    )
+    label_id = label_response.json()["id"]
+
+    client.post(
+        "/api/transactions",
+        json={
+            "amount": "8.00",
+            "occurred_at": "2024-01-03T12:00:00Z",
+            "description": "Midweek run",
+            "label_id": label_id,
+        },
+    )
+
+    monkeypatch.setattr(
+        api_module,
+        "fetch_weekly_suggestion",
+        lambda summary: "Test suggestion",
+    )
+
+    response = client.get(
+        "/api/reviews/weekly/suggestion?start_date=2024-01-01&end_date=2024-01-07"
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["suggestion"] == "Test suggestion"
+    assert data["summary"]["total_amount"] == "8.00"

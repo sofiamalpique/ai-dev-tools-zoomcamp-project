@@ -1,6 +1,7 @@
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
@@ -14,6 +15,7 @@ from app.schemas import (
     TransactionCreate,
     TransactionOut,
     WeeklyReviewOut,
+    WeeklyReviewSuggestionOut,
 )
 
 router = APIRouter()
@@ -94,11 +96,10 @@ def _format_amount(value: Decimal | None) -> str:
     return str(amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
-@router.get("/reviews/weekly", response_model=WeeklyReviewOut)
-def weekly_review(
-    start_date: date = Query(..., description="YYYY-MM-DD"),
-    end_date: date = Query(..., description="YYYY-MM-DD"),
-    db: Session = Depends(get_db),
+def _weekly_review_summary(
+    db: Session,
+    start_date: date,
+    end_date: date,
 ) -> WeeklyReviewOut:
     if start_date > end_date:
         raise HTTPException(
@@ -120,9 +121,7 @@ def weekly_review(
     )
 
     rows = db.execute(total_by_category).all()
-    total_amount = sum(
-        (row.total_amount or Decimal("0")) for row in rows
-    )
+    total_amount = sum((row.total_amount or Decimal("0")) for row in rows)
 
     return WeeklyReviewOut(
         start_date=start_date,
@@ -135,4 +134,71 @@ def weekly_review(
             }
             for row in rows
         ],
+    )
+
+
+def _weekly_review_prompt(summary: WeeklyReviewOut) -> str:
+    lines = [f"Total: {summary.total_amount}"]
+    for entry in summary.by_category:
+        lines.append(f"{entry.category_key}: {entry.total_amount}")
+    return "Weekly totals:\\n" + "\\n".join(lines)
+
+
+def fetch_weekly_suggestion(summary: WeeklyReviewOut) -> str:
+    payload = {"input": _weekly_review_prompt(summary)}
+    urls = [
+        "http://localhost:8001/suggest-weekly-review",
+        "http://mcp_server:8001/suggest-weekly-review",
+    ]
+    last_error: Exception | None = None
+
+    for url in urls:
+        try:
+            response = httpx.post(url, json=payload, timeout=5.0)
+            response.raise_for_status()
+            data = response.json()
+            suggestion = data.get("suggestion") if isinstance(data, dict) else None
+            if not suggestion:
+                raise HTTPException(
+                    status_code=502,
+                    detail="MCP response missing suggestion",
+                )
+            return suggestion
+        except httpx.RequestError as exc:
+            last_error = exc
+            continue
+        except httpx.HTTPStatusError as exc:
+            raise HTTPException(
+                status_code=502,
+                detail="MCP server error",
+            ) from exc
+
+    raise HTTPException(
+        status_code=502,
+        detail="MCP server unavailable",
+    ) from last_error
+
+
+@router.get("/reviews/weekly", response_model=WeeklyReviewOut)
+def weekly_review(
+    start_date: date = Query(..., description="YYYY-MM-DD"),
+    end_date: date = Query(..., description="YYYY-MM-DD"),
+    db: Session = Depends(get_db),
+) -> WeeklyReviewOut:
+    return _weekly_review_summary(db, start_date, end_date)
+
+
+@router.get("/reviews/weekly/suggestion", response_model=WeeklyReviewSuggestionOut)
+def weekly_review_suggestion(
+    start_date: date = Query(..., description="YYYY-MM-DD"),
+    end_date: date = Query(..., description="YYYY-MM-DD"),
+    db: Session = Depends(get_db),
+) -> WeeklyReviewSuggestionOut:
+    summary = _weekly_review_summary(db, start_date, end_date)
+    suggestion = fetch_weekly_suggestion(summary)
+    return WeeklyReviewSuggestionOut(
+        start_date=start_date,
+        end_date=end_date,
+        summary=summary,
+        suggestion=suggestion,
     )
