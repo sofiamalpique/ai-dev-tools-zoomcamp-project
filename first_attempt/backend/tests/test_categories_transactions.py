@@ -96,3 +96,47 @@ def test_create_and_list_transactions() -> None:
     data = list_response.json()
     assert len(data) == 1
     assert data[0]["label_id"] == label_id
+
+
+def test_weekly_review_totals() -> None:
+    categories = client.get("/api/categories").json()
+    supermarket = next(
+        item for item in categories if item["key"] == "supermarket"
+    )
+
+    label_response = client.post(
+        "/api/labels",
+        json={"label": "Groceries", "category_id": supermarket["id"]},
+    )
+    label_id = label_response.json()["id"]
+
+    client.post(
+        "/api/transactions",
+        json={
+            "amount": "10.00",
+            "occurred_at": "2024-01-02T09:00:00Z",
+            "description": "Weekly shop",
+            "label_id": label_id,
+        },
+    )
+    client.post(
+        "/api/transactions",
+        json={
+            "amount": "5.50",
+            "occurred_at": "2024-01-05T18:30:00Z",
+            "description": "Top-up",
+            "label_id": label_id,
+        },
+    )
+
+    response = client.get(
+        "/api/reviews/weekly?start_date=2024-01-01&end_date=2024-01-07"
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["start_date"] == "2024-01-01"
+    assert data["end_date"] == "2024-01-07"
+    assert data["total_amount"] == "15.50"
+
+    by_category = {item["category_key"]: item for item in data["by_category"]}
+    assert by_category["supermarket"]["total_amount"] == "15.50"

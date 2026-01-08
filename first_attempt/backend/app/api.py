@@ -1,5 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from datetime import date
+from decimal import Decimal, ROUND_HALF_UP
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -10,6 +13,7 @@ from app.schemas import (
     LabelOut,
     TransactionCreate,
     TransactionOut,
+    WeeklyReviewOut,
 )
 
 router = APIRouter()
@@ -83,3 +87,52 @@ def create_transaction(
     db.commit()
     db.refresh(transaction)
     return transaction
+
+
+def _format_amount(value: Decimal | None) -> str:
+    amount = value or Decimal("0")
+    return str(amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+
+@router.get("/reviews/weekly", response_model=WeeklyReviewOut)
+def weekly_review(
+    start_date: date = Query(..., description="YYYY-MM-DD"),
+    end_date: date = Query(..., description="YYYY-MM-DD"),
+    db: Session = Depends(get_db),
+) -> WeeklyReviewOut:
+    if start_date > end_date:
+        raise HTTPException(
+            status_code=422,
+            detail="start_date must be on or before end_date",
+        )
+
+    total_by_category = (
+        select(
+            Category.key.label("category_key"),
+            func.sum(Transaction.amount).label("total_amount"),
+        )
+        .join(Label, Label.category_id == Category.id)
+        .join(Transaction, Transaction.label_id == Label.id)
+        .where(func.date(Transaction.occurred_at) >= start_date)
+        .where(func.date(Transaction.occurred_at) <= end_date)
+        .group_by(Category.key)
+        .order_by(desc(func.sum(Transaction.amount)))
+    )
+
+    rows = db.execute(total_by_category).all()
+    total_amount = sum(
+        (row.total_amount or Decimal("0")) for row in rows
+    )
+
+    return WeeklyReviewOut(
+        start_date=start_date,
+        end_date=end_date,
+        total_amount=_format_amount(total_amount),
+        by_category=[
+            {
+                "category_key": row.category_key,
+                "total_amount": _format_amount(row.total_amount),
+            }
+            for row in rows
+        ],
+    )

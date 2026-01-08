@@ -33,20 +33,28 @@ curl http://localhost:8000/health
 curl http://localhost:8001/health
 ```
 
-## Categories and transactions
+## Categories, labels, and transactions
 
 ```bash
-curl -X POST http://localhost:8000/api/categories \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Housing","kind":"house"}'
-
 curl http://localhost:8000/api/categories
+
+curl -X POST http://localhost:8000/api/labels \
+  -H "Content-Type: application/json" \
+  -d '{"label":"Groceries","category_id":"<category-uuid>"}'
+
+curl http://localhost:8000/api/labels
 
 curl -X POST http://localhost:8000/api/transactions \
   -H "Content-Type: application/json" \
-  -d '{"amount":"42.50","occurred_at":"2024-01-01T10:00:00Z","description":"Weekly shop","category_id":"<category-uuid>"}'
+  -d '{"amount":"42.50","occurred_at":"2024-01-01T10:00:00Z","description":"Weekly shop","label_id":"<label-uuid>"}'
 
 curl http://localhost:8000/api/transactions
+```
+
+## Weekly review
+
+```bash
+curl "http://localhost:8000/api/reviews/weekly?start_date=2024-01-01&end_date=2024-01-07"
 ```
 
 ## Backend API docs

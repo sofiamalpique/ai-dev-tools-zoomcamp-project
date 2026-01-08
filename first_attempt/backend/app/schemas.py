@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -45,3 +45,15 @@ class TransactionOut(TransactionBase):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class WeeklyReviewCategoryOut(BaseModel):
+    category_key: str
+    total_amount: str
+
+
+class WeeklyReviewOut(BaseModel):
+    start_date: date
+    end_date: date
+    total_amount: str
+    by_category: list[WeeklyReviewCategoryOut]
