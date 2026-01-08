@@ -15,6 +15,11 @@ cp .env.example .env
 docker compose up --build
 ```
 
+## Frontend
+
+- Open http://localhost:5173
+- The UI calls http://localhost:8000/health and http://localhost:8001/health directly.
+
 ## Health endpoints
 
 ```bash
