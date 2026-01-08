@@ -85,7 +85,7 @@ def test_create_and_list_transactions() -> None:
         "/api/transactions",
         json={
             "amount": "42.50",
-            "occurred_at": "2024-01-01T10:00:00Z",
+            "occurred_at": "2024-01-01",
             "description": "Monthly subscription",
             "label_id": label_id,
         },
@@ -115,7 +115,7 @@ def test_weekly_review_totals() -> None:
         "/api/transactions",
         json={
             "amount": "10.00",
-            "occurred_at": "2024-01-02T09:00:00Z",
+            "occurred_at": "2024-01-02",
             "description": "Weekly shop",
             "label_id": label_id,
         },
@@ -124,7 +124,7 @@ def test_weekly_review_totals() -> None:
         "/api/transactions",
         json={
             "amount": "5.50",
-            "occurred_at": "2024-01-05T18:30:00Z",
+            "occurred_at": "2024-01-05",
             "description": "Top-up",
             "label_id": label_id,
         },
@@ -159,7 +159,7 @@ def test_weekly_review_suggestion(monkeypatch) -> None:
         "/api/transactions",
         json={
             "amount": "8.00",
-            "occurred_at": "2024-01-03T12:00:00Z",
+            "occurred_at": "2024-01-03",
             "description": "Midweek run",
             "label_id": label_id,
         },

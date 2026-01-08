@@ -306,12 +306,6 @@ function App() {
       return;
     }
 
-    const occurredAtIso = new Date(transactionOccurredAt).toISOString();
-    if (occurredAtIso === "Invalid Date") {
-      setTransactionError("Occurred at is invalid.");
-      return;
-    }
-
     setTransactionError(null);
 
     try {
@@ -320,7 +314,7 @@ function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount,
-          occurred_at: occurredAtIso,
+          occurred_at: transactionOccurredAt,
           description: transactionDescription.trim() || null,
           label_id: transactionLabelId,
         }),
@@ -588,7 +582,7 @@ function App() {
             <label className="form-field">
               <span className="form-label">Occurred at</span>
               <input
-                type="datetime-local"
+                type="date"
                 value={transactionOccurredAt}
                 onChange={(event) =>
                   setTransactionOccurredAt(event.target.value)
@@ -633,9 +627,7 @@ function App() {
                 {transactions.data.map((transaction) => {
                   const labelName = labelLookup.get(transaction.label_id);
                   const title = labelName ?? transaction.label_id;
-                  const occurredAt = new Date(
-                    transaction.occurred_at
-                  ).toLocaleString();
+                  const occurredAt = transaction.occurred_at;
 
                   return (
                     <li className="data-item" key={transaction.id}>

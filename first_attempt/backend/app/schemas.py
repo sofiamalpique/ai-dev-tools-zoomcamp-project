@@ -31,7 +31,7 @@ class LabelOut(LabelBase):
 
 class TransactionBase(BaseModel):
     amount: Decimal
-    occurred_at: datetime
+    occurred_at: date
     description: str | None = None
     label_id: UUID
 

@@ -1,8 +1,8 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Numeric, String, Text, func
+from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import CHAR, TypeDecorator
@@ -73,8 +73,8 @@ class Transaction(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4)
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
-    occurred_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
+    occurred_at: Mapped[date] = mapped_column(
+        Date(),
         nullable=False,
     )
     description: Mapped[str | None] = mapped_column(Text(), nullable=True)
