@@ -4,6 +4,7 @@ const BACKEND_URL = "http://localhost:8000/health";
 const MCP_URL = "http://localhost:8001/health";
 const API_BASE_URL = "http://localhost:8000";
 const CATEGORIES_URL = `${API_BASE_URL}/api/categories`;
+const LABELS_URL = `${API_BASE_URL}/api/labels`;
 const TRANSACTIONS_URL = `${API_BASE_URL}/api/transactions`;
 
 type HealthState = {
@@ -20,8 +21,14 @@ type ListState<T> = {
 
 type Category = {
   id: string;
-  name: string;
-  kind: string;
+  key: string;
+  created_at: string;
+};
+
+type Label = {
+  id: string;
+  label: string;
+  category_id: string;
   created_at: string;
 };
 
@@ -30,7 +37,7 @@ type Transaction = {
   amount: string;
   occurred_at: string;
   description: string | null;
-  category_id: string;
+  label_id: string;
   created_at: string;
 };
 
@@ -171,46 +178,65 @@ const HealthCard = ({
 function App() {
   const backend = useHealthCheck(BACKEND_URL);
   const mcp = useHealthCheck(MCP_URL);
-  const [categoriesRefresh, setCategoriesRefresh] = useState(0);
-  const [categoryName, setCategoryName] = useState("");
-  const [categoryKind, setCategoryKind] = useState("house");
-  const [categoryError, setCategoryError] = useState<string | null>(null);
-  const categories = useList<Category>(CATEGORIES_URL, categoriesRefresh);
+  const categories = useList<Category>(CATEGORIES_URL);
+  const [labelsRefresh, setLabelsRefresh] = useState(0);
+  const labels = useList<Label>(LABELS_URL, labelsRefresh);
   const transactions = useList<Transaction>(TRANSACTIONS_URL);
 
-  const handleCategorySubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const trimmedName = categoryName.trim();
+  const [labelName, setLabelName] = useState("");
+  const [labelCategoryId, setLabelCategoryId] = useState("");
+  const [labelError, setLabelError] = useState<string | null>(null);
 
-    if (!trimmedName) {
-      setCategoryError("Name is required.");
+  useEffect(() => {
+    if (!labelCategoryId && categories.data?.length) {
+      setLabelCategoryId(categories.data[0].id);
+    }
+  }, [categories.data, labelCategoryId]);
+
+  const handleLabelSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmedLabel = labelName.trim();
+
+    if (!trimmedLabel) {
+      setLabelError("Label is required.");
       return;
     }
 
-    setCategoryError(null);
+    if (!labelCategoryId) {
+      setLabelError("Pick a category.");
+      return;
+    }
+
+    setLabelError(null);
 
     try {
-      const response = await fetch(CATEGORIES_URL, {
+      const response = await fetch(LABELS_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: trimmedName, kind: categoryKind }),
+        body: JSON.stringify({
+          label: trimmedLabel,
+          category_id: labelCategoryId,
+        }),
       });
       const data = await response.json();
 
       if (!response.ok) {
-        setCategoryError(data?.detail ?? "Failed to create category.");
+        setLabelError(data?.detail ?? "Failed to create label.");
         return;
       }
 
-      setCategoryName("");
-      setCategoryKind("house");
-      setCategoriesRefresh((value) => value + 1);
+      setLabelName("");
+      setLabelsRefresh((value) => value + 1);
     } catch (error) {
-      setCategoryError(
-        error instanceof Error ? error.message : "Failed to create category."
+      setLabelError(
+        error instanceof Error ? error.message : "Failed to create label."
       );
     }
   };
+
+  const categoryLookup = new Map(
+    categories.data?.map((category) => [category.id, category.key]) ?? []
+  );
 
   return (
     <div className="page">
@@ -229,38 +255,6 @@ function App() {
 
       <section className="data-section">
         <h2 className="section-title">Categories</h2>
-        <form className="form-card" onSubmit={handleCategorySubmit}>
-          <div className="form-grid">
-            <label className="form-field">
-              <span className="form-label">Name</span>
-              <input
-                type="text"
-                value={categoryName}
-                onChange={(event) => setCategoryName(event.target.value)}
-                placeholder="e.g. Groceries"
-              />
-            </label>
-            <label className="form-field">
-              <span className="form-label">Kind</span>
-              <select
-                value={categoryKind}
-                onChange={(event) => setCategoryKind(event.target.value)}
-              >
-                <option value="house">house</option>
-                <option value="health">health</option>
-                <option value="supermarket">supermarket</option>
-                <option value="fun">fun</option>
-                <option value="subscriptions">subscriptions</option>
-              </select>
-            </label>
-          </div>
-          <div className="form-actions">
-            <button type="submit">Add category</button>
-            {categoryError && (
-              <span className="error-text">{categoryError}</span>
-            )}
-          </div>
-        </form>
         <article className="status-card">
           {categories.loading && <p className="hint">Loading categories...</p>}
           {categories.error && (
@@ -273,14 +267,76 @@ function App() {
                 {categories.data.map((category) => (
                   <li className="data-item" key={category.id}>
                     <div className="item-row">
-                      <span className="item-primary">{category.name}</span>
-                      <span className="item-secondary">{category.kind}</span>
+                      <span className="item-primary">{category.key}</span>
                     </div>
                   </li>
                 ))}
               </ul>
             ) : (
               <p className="hint">No categories yet.</p>
+            ))}
+        </article>
+      </section>
+
+      <section className="data-section">
+        <h2 className="section-title">Labels</h2>
+        <form className="form-card" onSubmit={handleLabelSubmit}>
+          <div className="form-grid">
+            <label className="form-field">
+              <span className="form-label">Label</span>
+              <input
+                type="text"
+                value={labelName}
+                onChange={(event) => setLabelName(event.target.value)}
+                placeholder="e.g. Netflix"
+              />
+            </label>
+            <label className="form-field">
+              <span className="form-label">Category</span>
+              <select
+                value={labelCategoryId}
+                onChange={(event) => setLabelCategoryId(event.target.value)}
+                disabled={categories.loading || !!categories.error}
+              >
+                {categories.data?.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.key}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="form-actions">
+            <button
+              type="submit"
+              disabled={categories.loading || !!categories.error}
+            >
+              Add label
+            </button>
+            {labelError && <span className="error-text">{labelError}</span>}
+          </div>
+        </form>
+        <article className="status-card">
+          {labels.loading && <p className="hint">Loading labels...</p>}
+          {labels.error && <p className="error-text">Error: {labels.error}</p>}
+          {!labels.loading &&
+            !labels.error &&
+            (labels.data?.length ? (
+              <ul className="data-list">
+                {labels.data.map((label) => (
+                  <li className="data-item" key={label.id}>
+                    <div className="item-row">
+                      <span className="item-primary">{label.label}</span>
+                      <span className="item-secondary">
+                        {categoryLookup.get(label.category_id) ??
+                          label.category_id}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="hint">No labels yet.</p>
             ))}
         </article>
       </section>
@@ -312,7 +368,7 @@ function App() {
                       {transaction.description ?? "No description"}
                     </p>
                     <p className="item-muted">
-                      Category: {transaction.category_id}
+                      Label: {transaction.label_id}
                     </p>
                   </li>
                 ))}

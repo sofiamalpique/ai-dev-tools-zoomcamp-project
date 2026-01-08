@@ -3,37 +3,52 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Category, Transaction
-from app.schemas import CategoryCreate, CategoryOut, TransactionCreate, TransactionOut
+from app.models import Category, Label, Transaction
+from app.schemas import (
+    CategoryOut,
+    LabelCreate,
+    LabelOut,
+    TransactionCreate,
+    TransactionOut,
+)
 
 router = APIRouter()
 
 
 @router.get("/categories", response_model=list[CategoryOut])
 def list_categories(db: Session = Depends(get_db)) -> list[CategoryOut]:
-    categories = db.execute(select(Category).order_by(Category.name)).scalars().all()
+    categories = db.execute(select(Category).order_by(Category.key)).scalars().all()
     return categories
 
 
+@router.get("/labels", response_model=list[LabelOut])
+def list_labels(db: Session = Depends(get_db)) -> list[LabelOut]:
+    labels = db.execute(select(Label).order_by(Label.label)).scalars().all()
+    return labels
+
+
 @router.post(
-    "/categories",
-    response_model=CategoryOut,
+    "/labels",
+    response_model=LabelOut,
     status_code=status.HTTP_201_CREATED,
 )
-def create_category(
-    payload: CategoryCreate,
+def create_label(
+    payload: LabelCreate,
     db: Session = Depends(get_db),
-) -> CategoryOut:
+) -> LabelOut:
+    category = db.get(Category, payload.category_id)
+    if category is None:
+        raise HTTPException(status_code=400, detail="Category not found")
     existing = db.execute(
-        select(Category).where(Category.name == payload.name)
+        select(Label).where(Label.label == payload.label)
     ).scalar_one_or_none()
     if existing:
-        raise HTTPException(status_code=409, detail="Category name already exists")
-    category = Category(name=payload.name, kind=payload.kind)
-    db.add(category)
+        raise HTTPException(status_code=409, detail="Label already exists")
+    label = Label(label=payload.label, category_id=payload.category_id)
+    db.add(label)
     db.commit()
-    db.refresh(category)
-    return category
+    db.refresh(label)
+    return label
 
 
 @router.get("/transactions", response_model=list[TransactionOut])
@@ -55,14 +70,14 @@ def create_transaction(
     payload: TransactionCreate,
     db: Session = Depends(get_db),
 ) -> TransactionOut:
-    category = db.get(Category, payload.category_id)
-    if category is None:
-        raise HTTPException(status_code=400, detail="Category not found")
+    label = db.get(Label, payload.label_id)
+    if label is None:
+        raise HTTPException(status_code=400, detail="Label not found")
     transaction = Transaction(
         amount=payload.amount,
         occurred_at=payload.occurred_at,
         description=payload.description,
-        category_id=payload.category_id,
+        label_id=payload.label_id,
     )
     db.add(transaction)
     db.commit()

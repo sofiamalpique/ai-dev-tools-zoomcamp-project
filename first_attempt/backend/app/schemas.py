@@ -5,16 +5,24 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 
-class CategoryBase(BaseModel):
-    name: str
-    kind: str
+class CategoryOut(BaseModel):
+    id: UUID
+    key: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
-class CategoryCreate(CategoryBase):
+class LabelBase(BaseModel):
+    label: str
+    category_id: UUID
+
+
+class LabelCreate(LabelBase):
     pass
 
 
-class CategoryOut(CategoryBase):
+class LabelOut(LabelBase):
     id: UUID
     created_at: datetime
 
@@ -25,7 +33,7 @@ class TransactionBase(BaseModel):
     amount: Decimal
     occurred_at: datetime
     description: str | None = None
-    category_id: UUID
+    label_id: UUID
 
 
 class TransactionCreate(TransactionBase):
