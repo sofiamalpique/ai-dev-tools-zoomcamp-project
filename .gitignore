@@ -1,0 +1,15 @@
+# Python
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.venv/
+**/venv/
+
+# Packaging/build artifacts
+**/*.egg-info/
+**/build/
+**/dist/
