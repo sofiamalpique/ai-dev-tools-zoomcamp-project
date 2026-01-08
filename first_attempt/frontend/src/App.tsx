@@ -181,17 +181,32 @@ function App() {
   const categories = useList<Category>(CATEGORIES_URL);
   const [labelsRefresh, setLabelsRefresh] = useState(0);
   const labels = useList<Label>(LABELS_URL, labelsRefresh);
-  const transactions = useList<Transaction>(TRANSACTIONS_URL);
+  const [transactionsRefresh, setTransactionsRefresh] = useState(0);
+  const transactions = useList<Transaction>(
+    TRANSACTIONS_URL,
+    transactionsRefresh
+  );
 
   const [labelName, setLabelName] = useState("");
   const [labelCategoryId, setLabelCategoryId] = useState("");
   const [labelError, setLabelError] = useState<string | null>(null);
+  const [transactionLabelId, setTransactionLabelId] = useState("");
+  const [transactionAmount, setTransactionAmount] = useState("");
+  const [transactionOccurredAt, setTransactionOccurredAt] = useState("");
+  const [transactionDescription, setTransactionDescription] = useState("");
+  const [transactionError, setTransactionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!labelCategoryId && categories.data?.length) {
       setLabelCategoryId(categories.data[0].id);
     }
   }, [categories.data, labelCategoryId]);
+
+  useEffect(() => {
+    if (!transactionLabelId && labels.data?.length) {
+      setTransactionLabelId(labels.data[0].id);
+    }
+  }, [labels.data, transactionLabelId]);
 
   const handleLabelSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -234,8 +249,67 @@ function App() {
     }
   };
 
+  const handleTransactionSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const amount = Number.parseFloat(transactionAmount);
+
+    if (!transactionLabelId) {
+      setTransactionError("Pick a label.");
+      return;
+    }
+
+    if (!Number.isFinite(amount)) {
+      setTransactionError("Amount is required.");
+      return;
+    }
+
+    if (!transactionOccurredAt) {
+      setTransactionError("Occurred at is required.");
+      return;
+    }
+
+    const occurredAtIso = new Date(transactionOccurredAt).toISOString();
+    if (occurredAtIso === "Invalid Date") {
+      setTransactionError("Occurred at is invalid.");
+      return;
+    }
+
+    setTransactionError(null);
+
+    try {
+      const response = await fetch(TRANSACTIONS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount,
+          occurred_at: occurredAtIso,
+          description: transactionDescription.trim() || null,
+          label_id: transactionLabelId,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setTransactionError(data?.detail ?? "Failed to create transaction.");
+        return;
+      }
+
+      setTransactionAmount("");
+      setTransactionOccurredAt("");
+      setTransactionDescription("");
+      setTransactionsRefresh((value) => value + 1);
+    } catch (error) {
+      setTransactionError(
+        error instanceof Error ? error.message : "Failed to create transaction."
+      );
+    }
+  };
+
   const categoryLookup = new Map(
     categories.data?.map((category) => [category.id, category.key]) ?? []
+  );
+  const labelLookup = new Map(
+    labels.data?.map((label) => [label.id, label.label]) ?? []
   );
 
   return (
@@ -343,6 +417,66 @@ function App() {
 
       <section className="data-section">
         <h2 className="section-title">Transactions</h2>
+        <form className="form-card" onSubmit={handleTransactionSubmit}>
+          <div className="form-grid transaction-grid">
+            <label className="form-field">
+              <span className="form-label">Label</span>
+              <select
+                value={transactionLabelId}
+                onChange={(event) => setTransactionLabelId(event.target.value)}
+                disabled={labels.loading || !!labels.error}
+              >
+                {labels.data?.map((label) => (
+                  <option key={label.id} value={label.id}>
+                    {label.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="form-field">
+              <span className="form-label">Amount</span>
+              <input
+                type="number"
+                value={transactionAmount}
+                onChange={(event) => setTransactionAmount(event.target.value)}
+                placeholder="0.00"
+                step="0.01"
+              />
+            </label>
+            <label className="form-field">
+              <span className="form-label">Occurred at</span>
+              <input
+                type="datetime-local"
+                value={transactionOccurredAt}
+                onChange={(event) =>
+                  setTransactionOccurredAt(event.target.value)
+                }
+              />
+            </label>
+            <label className="form-field">
+              <span className="form-label">Description</span>
+              <input
+                type="text"
+                value={transactionDescription}
+                onChange={(event) =>
+                  setTransactionDescription(event.target.value)
+                }
+                placeholder="Optional note"
+              />
+            </label>
+          </div>
+          <div className="form-actions">
+            <button
+              type="submit"
+              disabled={labels.loading || !!labels.error}
+            >
+              Add transaction
+            </button>
+            {transactionError && (
+              <span className="error-text">{transactionError}</span>
+            )}
+          </div>
+        </form>
         <article className="status-card">
           {transactions.loading && (
             <p className="hint">Loading transactions...</p>
@@ -354,24 +488,33 @@ function App() {
             !transactions.error &&
             (transactions.data?.length ? (
               <ul className="data-list">
-                {transactions.data.map((transaction) => (
-                  <li className="data-item" key={transaction.id}>
-                    <div className="item-row">
-                      <span className="item-primary">
-                        {transaction.occurred_at}
-                      </span>
-                      <span className="item-secondary">
-                        {transaction.amount}
-                      </span>
-                    </div>
-                    <p className="item-muted">
-                      {transaction.description ?? "No description"}
-                    </p>
-                    <p className="item-muted">
-                      Label: {transaction.label_id}
-                    </p>
-                  </li>
-                ))}
+                {transactions.data.map((transaction) => {
+                  const labelName = labelLookup.get(transaction.label_id);
+                  const title = labelName ?? transaction.label_id;
+                  const occurredAt = new Date(
+                    transaction.occurred_at
+                  ).toLocaleString();
+
+                  return (
+                    <li className="data-item" key={transaction.id}>
+                      <div className="item-row">
+                        <span className="item-primary">{title}</span>
+                        <span className="item-secondary">
+                          {transaction.amount}
+                        </span>
+                      </div>
+                      <p className="item-muted">{occurredAt}</p>
+                      <p className="item-muted">
+                        {transaction.description ?? "No description"}
+                      </p>
+                      {!labelName && (
+                        <p className="item-muted">
+                          Label ID: {transaction.label_id}
+                        </p>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <p className="hint">No transactions yet.</p>

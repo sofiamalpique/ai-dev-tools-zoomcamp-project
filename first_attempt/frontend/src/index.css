@@ -223,11 +223,16 @@ h1 {
   gap: 12px;
 }
 
+.transaction-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .form-field {
   display: grid;
   gap: 8px;
   font-size: 0.85rem;
   color: var(--muted);
+  min-width: 0;
 }
 
 .form-field input,
@@ -238,6 +243,8 @@ h1 {
   background: #fffdf8;
   color: var(--ink);
   font-size: 0.95rem;
+  width: 100%;
+  min-width: 0;
 }
 
 .form-actions {
@@ -261,6 +268,18 @@ h1 {
 .form-actions button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+  .transaction-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .transaction-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @keyframes fade-in {
