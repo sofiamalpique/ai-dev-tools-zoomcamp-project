@@ -187,6 +187,10 @@ h1 {
   font-weight: 600;
 }
 
+.review-summary {
+  margin-bottom: 12px;
+}
+
 .item-primary {
   font-size: 0.95rem;
 }

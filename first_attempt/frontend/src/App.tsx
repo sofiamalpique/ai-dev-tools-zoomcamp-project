@@ -6,6 +6,7 @@ const API_BASE_URL = "http://localhost:8000";
 const CATEGORIES_URL = `${API_BASE_URL}/api/categories`;
 const LABELS_URL = `${API_BASE_URL}/api/labels`;
 const TRANSACTIONS_URL = `${API_BASE_URL}/api/transactions`;
+const WEEKLY_REVIEW_URL = `${API_BASE_URL}/api/reviews/weekly`;
 
 type HealthState = {
   ok: boolean | null;
@@ -41,10 +42,29 @@ type Transaction = {
   created_at: string;
 };
 
+type WeeklyReviewCategory = {
+  category_key: string;
+  total_amount: string;
+};
+
+type WeeklyReview = {
+  start_date: string;
+  end_date: string;
+  total_amount: string;
+  by_category: WeeklyReviewCategory[];
+};
+
 const initialState: HealthState = {
   ok: null,
   data: null,
   error: null,
+};
+
+const buildDateInputValue = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 };
 
 const statusLabel = (state: HealthState) =>
@@ -195,6 +215,15 @@ function App() {
   const [transactionOccurredAt, setTransactionOccurredAt] = useState("");
   const [transactionDescription, setTransactionDescription] = useState("");
   const [transactionError, setTransactionError] = useState<string | null>(null);
+  const [reviewStart, setReviewStart] = useState(() =>
+    buildDateInputValue(new Date(Date.now() - 6 * 24 * 60 * 60 * 1000))
+  );
+  const [reviewEnd, setReviewEnd] = useState(() =>
+    buildDateInputValue(new Date())
+  );
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reviewData, setReviewData] = useState<WeeklyReview | null>(null);
 
   useEffect(() => {
     if (!labelCategoryId && categories.data?.length) {
@@ -305,6 +334,41 @@ function App() {
     }
   };
 
+  const handleReviewSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!reviewStart || !reviewEnd) {
+      setReviewError("Start and end dates are required.");
+      return;
+    }
+
+    setReviewError(null);
+    setReviewLoading(true);
+
+    try {
+      const response = await fetch(
+        `${WEEKLY_REVIEW_URL}?start_date=${encodeURIComponent(
+          reviewStart
+        )}&end_date=${encodeURIComponent(reviewEnd)}`
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        setReviewError(data?.detail ?? "Failed to load review.");
+        setReviewData(null);
+        return;
+      }
+
+      setReviewData(data);
+    } catch (error) {
+      setReviewError(
+        error instanceof Error ? error.message : "Failed to load review."
+      );
+      setReviewData(null);
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
   const categoryLookup = new Map(
     categories.data?.map((category) => [category.id, category.key]) ?? []
   );
@@ -412,6 +476,66 @@ function App() {
             ) : (
               <p className="hint">No labels yet.</p>
             ))}
+        </article>
+      </section>
+
+      <section className="data-section">
+        <h2 className="section-title">Weekly Review</h2>
+        <form className="form-card" onSubmit={handleReviewSubmit}>
+          <div className="form-grid">
+            <label className="form-field">
+              <span className="form-label">Start date</span>
+              <input
+                type="date"
+                value={reviewStart}
+                onChange={(event) => setReviewStart(event.target.value)}
+              />
+            </label>
+            <label className="form-field">
+              <span className="form-label">End date</span>
+              <input
+                type="date"
+                value={reviewEnd}
+                onChange={(event) => setReviewEnd(event.target.value)}
+              />
+            </label>
+          </div>
+          <div className="form-actions">
+            <button type="submit" disabled={reviewLoading}>
+              {reviewLoading ? "Loading..." : "Get weekly review"}
+            </button>
+            {reviewError && <span className="error-text">{reviewError}</span>}
+          </div>
+        </form>
+        <article className="status-card">
+          {reviewData ? (
+            <>
+              <div className="item-row review-summary">
+                <span className="item-primary">Total</span>
+                <span className="item-secondary">{reviewData.total_amount}</span>
+              </div>
+              {reviewData.by_category.length ? (
+                <ul className="data-list">
+                  {reviewData.by_category.map((entry) => (
+                    <li className="data-item" key={entry.category_key}>
+                      <div className="item-row">
+                        <span className="item-primary">
+                          {entry.category_key}
+                        </span>
+                        <span className="item-secondary">
+                          {entry.total_amount}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="hint">No category totals for this range.</p>
+              )}
+            </>
+          ) : (
+            <p className="hint">Run a review to see totals.</p>
+          )}
         </article>
       </section>
 
