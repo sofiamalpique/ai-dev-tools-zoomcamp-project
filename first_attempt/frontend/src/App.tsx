@@ -273,6 +273,7 @@ function App() {
   const [habitNoEndDate, setHabitNoEndDate] = useState(true);
   const [habitInterval, setHabitInterval] = useState("1");
   const [habitUnit, setHabitUnit] = useState<HabitUnit>("day");
+  const [isAddHabitOpen, setIsAddHabitOpen] = useState(false);
   const [transactionLabelId, setTransactionLabelId] = useState("");
   const [transactionAmount, setTransactionAmount] = useState("");
   const [transactionOccurredAt, setTransactionOccurredAt] = useState("");
@@ -466,6 +467,7 @@ function App() {
       setHabitUnit("day");
       setHabitsRefresh((value) => value + 1);
       setHabitsForDateRefresh((value) => value + 1);
+      setIsAddHabitOpen(false);
     } catch (error) {
       setHabitError(
         error instanceof Error ? error.message : "Failed to create habit."
@@ -782,7 +784,19 @@ function App() {
       </section>
 
       <section className="data-section">
-        <h2 className="section-title">Habits</h2>
+        <div className="section-header">
+          <h2 className="section-title">Habits</h2>
+          {!isAddHabitOpen && (
+            <button
+              className="add-habit-button"
+              type="button"
+              aria-label="Add habit"
+              onClick={() => setIsAddHabitOpen(true)}
+            >
+              +
+            </button>
+          )}
+        </div>
         <div className="form-card">
           <div className="form-grid">
             <label className="form-field">
@@ -795,92 +809,101 @@ function App() {
             </label>
           </div>
         </div>
-        <form className="form-card" onSubmit={handleHabitSubmit}>
-          <div className="form-grid">
-            <label className="form-field">
-              <span className="form-label">Habit name</span>
-              <input
-                type="text"
-                value={habitName}
-                onChange={(event) => setHabitName(event.target.value)}
-                placeholder="e.g. Drink water"
-              />
-            </label>
-            <label className="form-field">
-              <span className="form-label">Starts</span>
-              <input
-                type="date"
-                value={habitStartDate}
-                onChange={(event) => {
-                  setHabitStartAuto(false);
-                  setHabitStartDate(event.target.value);
-                }}
-              />
-            </label>
-            <div className="form-field form-span-2">
-              <span className="form-label">Repeats</span>
-              <div className="form-inline">
-                <span className="inline-text">Every</span>
+        {isAddHabitOpen && (
+          <form className="form-card" onSubmit={handleHabitSubmit}>
+            <div className="form-grid">
+              <label className="form-field">
+                <span className="form-label">Habit name</span>
                 <input
-                  className="inline-input"
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={habitInterval}
-                  onChange={(event) => setHabitInterval(event.target.value)}
+                  type="text"
+                  value={habitName}
+                  onChange={(event) => setHabitName(event.target.value)}
+                  placeholder="e.g. Drink water"
                 />
-                <select
-                  className="inline-select"
-                  value={habitUnit}
-                  onChange={(event) =>
-                    setHabitUnit(
-                      event.target.value as "day" | "week" | "month"
-                    )
-                  }
-                >
-                  <option value="day">day</option>
-                  <option value="week">week</option>
-                  <option value="month">month</option>
-                </select>
-              </div>
-            </div>
-            <div className="form-field form-span-2">
-              <span className="form-label">Ends</span>
-              <div className="form-inline">
-                <label className="checkbox-inline">
+              </label>
+              <label className="form-field">
+                <span className="form-label">Starts</span>
+                <input
+                  type="date"
+                  value={habitStartDate}
+                  onChange={(event) => {
+                    setHabitStartAuto(false);
+                    setHabitStartDate(event.target.value);
+                  }}
+                />
+              </label>
+              <div className="form-field form-span-2">
+                <span className="form-label">Repeats</span>
+                <div className="form-inline">
+                  <span className="inline-text">Every</span>
                   <input
-                    type="checkbox"
-                    checked={habitNoEndDate}
+                    className="inline-input"
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={habitInterval}
+                    onChange={(event) => setHabitInterval(event.target.value)}
+                  />
+                  <select
+                    className="inline-select"
+                    value={habitUnit}
+                    onChange={(event) =>
+                      setHabitUnit(
+                        event.target.value as "day" | "week" | "month"
+                      )
+                    }
+                  >
+                    <option value="day">day</option>
+                    <option value="week">week</option>
+                    <option value="month">month</option>
+                  </select>
+                </div>
+              </div>
+              <div className="form-field form-span-2">
+                <span className="form-label">Ends</span>
+                <div className="form-inline">
+                  <label className="checkbox-inline">
+                    <input
+                      type="checkbox"
+                      checked={habitNoEndDate}
+                      onChange={(event) => {
+                        setHabitNoEndDate(event.target.checked);
+                        if (event.target.checked) {
+                          setHabitEndDate("");
+                        }
+                      }}
+                    />
+                    <span>Never</span>
+                  </label>
+                  <span className="inline-text">On</span>
+                  <input
+                    className="inline-input"
+                    type="date"
+                    value={habitEndDate}
                     onChange={(event) => {
-                      setHabitNoEndDate(event.target.checked);
-                      if (event.target.checked) {
-                        setHabitEndDate("");
+                      setHabitEndDate(event.target.value);
+                      if (event.target.value) {
+                        setHabitNoEndDate(false);
                       }
                     }}
+                    disabled={habitNoEndDate}
                   />
-                  <span>Never</span>
-                </label>
-                <span className="inline-text">On</span>
-                <input
-                  className="inline-input"
-                  type="date"
-                  value={habitEndDate}
-                  onChange={(event) => {
-                    setHabitEndDate(event.target.value);
-                    if (event.target.value) {
-                      setHabitNoEndDate(false);
-                    }
-                  }}
-                  disabled={habitNoEndDate}
-                />
+                </div>
               </div>
             </div>
-          </div>
-          <div className="form-actions">
-            <button type="submit">Add habit</button>
-            {habitError && <span className="error-text">{habitError}</span>}
-          </div>
-        </form>
+            <div className="form-actions">
+              <button type="submit">Add habit</button>
+              <button
+                type="button"
+                className="button-secondary"
+                onClick={() => setIsAddHabitOpen(false)}
+              >
+                Cancel
+              </button>
+              {habitError && <span className="error-text">{habitError}</span>}
+            </div>
+          </form>
+        )}
         <article className="status-card">
           {habitsForDate.loading && (
             <p className="hint">Loading habits...</p>

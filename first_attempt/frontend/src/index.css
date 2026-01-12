@@ -165,6 +165,45 @@ h1 {
   margin: 0 0 16px;
 }
 
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.section-header .section-title {
+  margin: 0;
+}
+
+.add-habit-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(15, 118, 110, 0.25);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.add-habit-button:hover {
+  transform: translateY(-1px);
+}
+
+.add-habit-button:focus-visible {
+  outline: 3px solid rgba(15, 118, 110, 0.35);
+  outline-offset: 3px;
+}
+
 .data-list {
   list-style: none;
   margin: 0;
@@ -337,6 +376,20 @@ h1 {
   cursor: not-allowed;
 }
 
+.button-secondary {
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(31, 27, 22, 0.2);
+  background: #fffaf2;
+  color: var(--ink);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.button-secondary:hover {
+  background: #fff3e0;
+}
+
 .secondary-panel {
   margin-top: 14px;
 }
@@ -369,6 +422,10 @@ h1 {
 @media (max-width: 600px) {
   .transaction-grid {
     grid-template-columns: 1fr;
+  }
+
+  .section-header {
+    align-items: flex-start;
   }
 }
 
