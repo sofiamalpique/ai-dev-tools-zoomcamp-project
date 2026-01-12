@@ -27,3 +27,6 @@ packages = ["app"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+  "integration: integration tests requiring Postgres (and optional MCP)",
+]

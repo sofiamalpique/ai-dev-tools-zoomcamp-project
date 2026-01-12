@@ -147,7 +147,14 @@ VITE_API_BASE_URL=http://localhost:8000 npm run dev
 ```
 
 ## Testing
-Backend tests:
+Frontend unit tests:
+```bash
+cd first_attempt/frontend
+npm ci
+npm test
+```
+
+Backend unit tests:
 ```bash
 cd first_attempt/backend
 python -m venv .venv
@@ -156,7 +163,23 @@ pip install -r requirements.txt -r requirements-dev.txt
 pytest
 ```
 
-Frontend tests: not implemented yet.
+## Unit vs Integration tests
+Unit tests (fast, no external services):
+- Frontend: `npm test` in `first_attempt/frontend`.
+- Backend: `pytest` in `first_attempt/backend` (uses in-memory SQLite).
+
+Integration tests (real Postgres, optional MCP):
+```bash
+cd first_attempt
+docker compose up -d db mcp_server
+export DATABASE_URL=postgresql+psycopg://app:app@localhost:5432/app
+cd backend
+alembic upgrade head
+pytest tests/integration
+```
+
+Note: the weekly suggestion integration test is skipped unless the MCP server
+is running at `http://localhost:8001`.
 
 ## CI
 GitHub Actions runs on push and pull request and executes:
