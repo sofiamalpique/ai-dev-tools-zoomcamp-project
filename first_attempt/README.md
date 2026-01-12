@@ -108,6 +108,9 @@ cp .env.example .env
 docker compose up --build
 ```
 
+Frontend API base defaults to `http://localhost:8000`. If the backend runs
+elsewhere, set `VITE_API_BASE_URL` before starting the frontend.
+
 Run database migrations (first-time or after schema changes):
 ```bash
 docker compose exec backend alembic upgrade head
@@ -136,6 +139,11 @@ Frontend:
 cd first_attempt/frontend
 npm install
 npm run dev
+```
+
+Optional: override the API base before starting the dev server:
+```bash
+VITE_API_BASE_URL=http://localhost:8000 npm run dev
 ```
 
 ## Testing
