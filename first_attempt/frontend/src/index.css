@@ -180,6 +180,33 @@ h1 {
   border: 1px solid rgba(31, 27, 22, 0.12);
 }
 
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.checkbox-row.is-disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.checkbox-row input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.checkbox-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
 .item-row {
   display: flex;
   justify-content: space-between;
@@ -217,6 +244,12 @@ h1 {
   font-weight: 600;
 }
 
+.notice-text {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 600;
+}
+
 .form-card {
   background: #fff4e3;
   border: 1px solid rgba(31, 27, 22, 0.12);
@@ -229,6 +262,26 @@ h1 {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
+}
+
+.form-span-2 {
+  grid-column: span 2;
+}
+
+.form-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.inline-text {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.inline-input {
+  max-width: 140px;
 }
 
 .transaction-grid {
@@ -255,6 +308,12 @@ h1 {
   min-width: 0;
 }
 
+.form-inline .inline-input,
+.form-inline .inline-select {
+  width: auto;
+  flex: 0 1 160px;
+}
+
 .form-actions {
   display: flex;
   align-items: center;
@@ -278,9 +337,32 @@ h1 {
   cursor: not-allowed;
 }
 
+.secondary-panel {
+  margin-top: 14px;
+}
+
+.summary-line {
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.secondary-panel[open] .summary-line {
+  margin-bottom: 10px;
+}
+
+.secondary-card {
+  background: #fff1dc;
+  box-shadow: none;
+}
+
 @media (max-width: 900px) {
   .transaction-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .form-span-2 {
+    grid-column: span 1;
   }
 }
 

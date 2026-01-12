@@ -5,6 +5,8 @@ const MCP_URL = "http://localhost:8001/health";
 const API_BASE_URL = "http://localhost:8000";
 const CATEGORIES_URL = `${API_BASE_URL}/api/categories`;
 const LABELS_URL = `${API_BASE_URL}/api/labels`;
+const HABITS_URL = `${API_BASE_URL}/api/habits`;
+const HABITS_FOR_DATE_URL = `${API_BASE_URL}/api/habits/for-date`;
 const TRANSACTIONS_URL = `${API_BASE_URL}/api/transactions`;
 const WEEKLY_REVIEW_URL = `${API_BASE_URL}/api/reviews/weekly/suggestion`;
 
@@ -42,6 +44,27 @@ type Transaction = {
   created_at: string;
 };
 
+type HabitUnit = "day" | "week" | "month";
+
+type HabitSchedule = {
+  start_date: string;
+  end_date: string | null;
+  interval: number;
+  unit: HabitUnit;
+};
+
+type HabitForDate = HabitSchedule & {
+  id: string;
+  name: string;
+  checked: boolean;
+};
+
+type Habit = HabitSchedule & {
+  id: string;
+  name: string;
+  created_at: string;
+};
+
 type WeeklyReviewCategory = {
   category_key: string;
   total_amount: string;
@@ -72,6 +95,17 @@ const buildDateInputValue = (date: Date) => {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+};
+
+const buildScheduleSummary = (habit: HabitSchedule) => {
+  const unitLabel =
+    habit.interval === 1 ? habit.unit : `${habit.unit}s`;
+  const repeatText =
+    habit.interval === 1
+      ? `Every ${habit.unit}`
+      : `Every ${habit.interval} ${unitLabel}`;
+  const endText = habit.end_date ? `Ends ${habit.end_date}` : "No end date";
+  return `${repeatText} \u2022 Started ${habit.start_date} \u2022 ${endText}`;
 };
 
 const statusLabel = (state: HealthState) =>
@@ -208,6 +242,14 @@ function App() {
   const categories = useList<Category>(CATEGORIES_URL);
   const [labelsRefresh, setLabelsRefresh] = useState(0);
   const labels = useList<Label>(LABELS_URL, labelsRefresh);
+  const [habitsRefresh, setHabitsRefresh] = useState(0);
+  const habits = useList<Habit>(HABITS_URL, habitsRefresh);
+  const [habitsForDateRefresh, setHabitsForDateRefresh] = useState(0);
+  const [habitsForDate, setHabitsForDate] = useState<ListState<HabitForDate>>({
+    data: null,
+    loading: true,
+    error: null,
+  });
   const [transactionsRefresh, setTransactionsRefresh] = useState(0);
   const transactions = useList<Transaction>(
     TRANSACTIONS_URL,
@@ -217,6 +259,20 @@ function App() {
   const [labelName, setLabelName] = useState("");
   const [labelCategoryId, setLabelCategoryId] = useState("");
   const [labelError, setLabelError] = useState<string | null>(null);
+  const [habitName, setHabitName] = useState("");
+  const [habitError, setHabitError] = useState<string | null>(null);
+  const [habitToggleError, setHabitToggleError] = useState<string | null>(null);
+  const [habitsDate, setHabitsDate] = useState(() =>
+    buildDateInputValue(new Date())
+  );
+  const [habitStartDate, setHabitStartDate] = useState(() =>
+    buildDateInputValue(new Date())
+  );
+  const [habitStartAuto, setHabitStartAuto] = useState(true);
+  const [habitEndDate, setHabitEndDate] = useState("");
+  const [habitNoEndDate, setHabitNoEndDate] = useState(true);
+  const [habitInterval, setHabitInterval] = useState("1");
+  const [habitUnit, setHabitUnit] = useState<HabitUnit>("day");
   const [transactionLabelId, setTransactionLabelId] = useState("");
   const [transactionAmount, setTransactionAmount] = useState("");
   const [transactionOccurredAt, setTransactionOccurredAt] = useState("");
@@ -245,6 +301,74 @@ function App() {
       setTransactionLabelId(labels.data[0].id);
     }
   }, [labels.data, transactionLabelId]);
+
+  useEffect(() => {
+    if (habitStartAuto) {
+      setHabitStartDate(habitsDate);
+    }
+  }, [habitsDate, habitStartAuto]);
+
+  useEffect(() => {
+    let active = true;
+    setHabitToggleError(null);
+
+    if (!habitsDate) {
+      setHabitsForDate({
+        data: null,
+        loading: false,
+        error: "Date is required.",
+      });
+      return () => {
+        active = false;
+      };
+    }
+
+    const load = async () => {
+      setHabitsForDate((prev) => ({
+        ...prev,
+        loading: true,
+        error: null,
+      }));
+
+      try {
+        const response = await fetch(
+          `${HABITS_FOR_DATE_URL}?date=${encodeURIComponent(habitsDate)}`
+        );
+        const data = await response.json();
+
+        if (!active) {
+          return;
+        }
+
+        if (!response.ok) {
+          setHabitsForDate({
+            data: null,
+            loading: false,
+            error: data?.detail ?? "Failed to load habits.",
+          });
+          return;
+        }
+
+        setHabitsForDate({ data, loading: false, error: null });
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+        setHabitsForDate({
+          data: null,
+          loading: false,
+          error: error instanceof Error ? error.message : "Request failed.",
+        });
+      }
+    };
+
+    load();
+
+    return () => {
+      active = false;
+    };
+  }, [habitsDate, habitsForDateRefresh]);
 
   const handleLabelSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -283,6 +407,105 @@ function App() {
     } catch (error) {
       setLabelError(
         error instanceof Error ? error.message : "Failed to create label."
+      );
+    }
+  };
+
+  const handleHabitSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmedName = habitName.trim();
+    const intervalValue = Number.parseInt(habitInterval, 10);
+
+    if (!trimmedName) {
+      setHabitError("Habit name is required.");
+      return;
+    }
+
+    if (!habitStartDate) {
+      setHabitError("Start date is required.");
+      return;
+    }
+
+    if (!Number.isInteger(intervalValue) || intervalValue < 1) {
+      setHabitError("Interval must be at least 1.");
+      return;
+    }
+
+    if (!habitNoEndDate && !habitEndDate) {
+      setHabitError("End date is required or choose no end date.");
+      return;
+    }
+
+    setHabitError(null);
+
+    try {
+      const response = await fetch(HABITS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: trimmedName,
+          start_date: habitStartDate,
+          end_date: habitNoEndDate ? null : habitEndDate,
+          interval: intervalValue,
+          unit: habitUnit,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setHabitError(data?.detail ?? "Failed to create habit.");
+        return;
+      }
+
+      setHabitName("");
+      setHabitStartAuto(true);
+      setHabitStartDate(habitsDate);
+      setHabitEndDate("");
+      setHabitNoEndDate(true);
+      setHabitInterval("1");
+      setHabitUnit("day");
+      setHabitsRefresh((value) => value + 1);
+      setHabitsForDateRefresh((value) => value + 1);
+    } catch (error) {
+      setHabitError(
+        error instanceof Error ? error.message : "Failed to create habit."
+      );
+    }
+  };
+
+  const handleHabitToggle = async (habitId: string) => {
+    if (!habitsDate) {
+      setHabitToggleError("Date is required.");
+      return;
+    }
+
+    setHabitToggleError(null);
+
+    try {
+      const response = await fetch(`${HABITS_URL}/${habitId}/toggle`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: habitsDate }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        const detail = data?.detail ?? "Unable to update habit.";
+        setHabitToggleError(
+          response.status === 400 &&
+            detail === "Habit not scheduled for this date"
+            ? "Not scheduled for this date. Pick a due date."
+            : detail
+        );
+        return;
+      }
+
+      if (data?.status) {
+        setHabitsForDateRefresh((value) => value + 1);
+      }
+    } catch (error) {
+      setHabitToggleError(
+        error instanceof Error ? error.message : "Failed to toggle habit."
       );
     }
   };
@@ -378,6 +601,13 @@ function App() {
   const labelLookup = new Map(
     labels.data?.map((label) => [label.id, label.label]) ?? []
   );
+  const dueHabitIds = habitsForDate.data
+    ? new Set(habitsForDate.data.map((habit) => habit.id))
+    : null;
+  const notDueHabits =
+    dueHabitIds && habits.data
+      ? habits.data.filter((habit) => !dueHabitIds.has(habit.id))
+      : null;
 
   return (
     <div className="page">
@@ -549,6 +779,187 @@ function App() {
             <p className="hint">Run a review to see totals.</p>
           )}
         </article>
+      </section>
+
+      <section className="data-section">
+        <h2 className="section-title">Habits</h2>
+        <div className="form-card">
+          <div className="form-grid">
+            <label className="form-field">
+              <span className="form-label">Date</span>
+              <input
+                type="date"
+                value={habitsDate}
+                onChange={(event) => setHabitsDate(event.target.value)}
+              />
+            </label>
+          </div>
+        </div>
+        <form className="form-card" onSubmit={handleHabitSubmit}>
+          <div className="form-grid">
+            <label className="form-field">
+              <span className="form-label">Habit name</span>
+              <input
+                type="text"
+                value={habitName}
+                onChange={(event) => setHabitName(event.target.value)}
+                placeholder="e.g. Drink water"
+              />
+            </label>
+            <label className="form-field">
+              <span className="form-label">Starts</span>
+              <input
+                type="date"
+                value={habitStartDate}
+                onChange={(event) => {
+                  setHabitStartAuto(false);
+                  setHabitStartDate(event.target.value);
+                }}
+              />
+            </label>
+            <div className="form-field form-span-2">
+              <span className="form-label">Repeats</span>
+              <div className="form-inline">
+                <span className="inline-text">Every</span>
+                <input
+                  className="inline-input"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={habitInterval}
+                  onChange={(event) => setHabitInterval(event.target.value)}
+                />
+                <select
+                  className="inline-select"
+                  value={habitUnit}
+                  onChange={(event) =>
+                    setHabitUnit(
+                      event.target.value as "day" | "week" | "month"
+                    )
+                  }
+                >
+                  <option value="day">day</option>
+                  <option value="week">week</option>
+                  <option value="month">month</option>
+                </select>
+              </div>
+            </div>
+            <div className="form-field form-span-2">
+              <span className="form-label">Ends</span>
+              <div className="form-inline">
+                <label className="checkbox-inline">
+                  <input
+                    type="checkbox"
+                    checked={habitNoEndDate}
+                    onChange={(event) => {
+                      setHabitNoEndDate(event.target.checked);
+                      if (event.target.checked) {
+                        setHabitEndDate("");
+                      }
+                    }}
+                  />
+                  <span>Never</span>
+                </label>
+                <span className="inline-text">On</span>
+                <input
+                  className="inline-input"
+                  type="date"
+                  value={habitEndDate}
+                  onChange={(event) => {
+                    setHabitEndDate(event.target.value);
+                    if (event.target.value) {
+                      setHabitNoEndDate(false);
+                    }
+                  }}
+                  disabled={habitNoEndDate}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="form-actions">
+            <button type="submit">Add habit</button>
+            {habitError && <span className="error-text">{habitError}</span>}
+          </div>
+        </form>
+        <article className="status-card">
+          {habitsForDate.loading && (
+            <p className="hint">Loading habits...</p>
+          )}
+          {habitsForDate.error && (
+            <p className="error-text">Error: {habitsForDate.error}</p>
+          )}
+          {habitToggleError && (
+            <p className="notice-text">{habitToggleError}</p>
+          )}
+          {!habitsForDate.loading &&
+            !habitsForDate.error &&
+            (habitsForDate.data?.length ? (
+              <ul className="data-list">
+                {habitsForDate.data.map((habit) => (
+                  <li className="data-item" key={habit.id}>
+                    <label className="checkbox-row">
+                      <input
+                        type="checkbox"
+                        checked={habit.checked}
+                        onChange={() => handleHabitToggle(habit.id)}
+                        disabled={
+                          habitsForDate.loading ||
+                          !!habitsForDate.error ||
+                          !habitsDate
+                        }
+                      />
+                      <span className="item-primary">{habit.name}</span>
+                    </label>
+                    <p className="item-muted">
+                      {buildScheduleSummary(habit)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="hint">No habits due for this date.</p>
+            ))}
+        </article>
+        <details className="secondary-panel">
+          <summary className="summary-line">
+            Not due
+            {notDueHabits ? ` (${notDueHabits.length})` : ""}
+          </summary>
+          <article className="status-card secondary-card">
+            {habits.loading && <p className="hint">Loading habits...</p>}
+            {habits.error && (
+              <p className="error-text">Error: {habits.error}</p>
+            )}
+            {!habits.loading &&
+              !habits.error &&
+              (notDueHabits === null ? (
+                <p className="hint">
+                  Pick a date to see which habits are not due.
+                </p>
+              ) : notDueHabits.length ? (
+                <ul className="data-list">
+                  {notDueHabits.map((habit) => (
+                    <li className="data-item" key={habit.id}>
+                      <label className="checkbox-row is-disabled">
+                        <input type="checkbox" checked={false} disabled />
+                        <span className="item-primary">{habit.name}</span>
+                      </label>
+                      <p className="item-muted">
+                        {buildScheduleSummary(habit)}
+                      </p>
+                      <p className="item-muted">Not due for this date.</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="hint">
+                  {habits.data?.length
+                    ? "All habits are due for this date."
+                    : "No habits created yet."}
+                </p>
+              ))}
+          </article>
+        </details>
       </section>
 
       <section className="data-section">
