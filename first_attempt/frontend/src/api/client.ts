@@ -5,7 +5,7 @@ const normalizeBaseUrl = (baseUrl: string) => baseUrl.replace(/\/+$/, "");
 export const API_BASE_URL = normalizeBaseUrl(
   import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL
 );
-export const MCP_BASE_URL = normalizeBaseUrl("http://localhost:8001");
+export const MCP_BASE_URL = normalizeBaseUrl("https://ai-dev-tools-zoomcamp-project-1.onrender.com/");
 
 type JsonValue = unknown;
 
@@ -44,9 +44,9 @@ export const createJsonClient = (baseUrl: string) => {
     if (!response.ok) {
       const detail =
         typeof data === "object" &&
-        data !== null &&
-        "detail" in data &&
-        typeof (data as { detail?: unknown }).detail === "string"
+          data !== null &&
+          "detail" in data &&
+          typeof (data as { detail?: unknown }).detail === "string"
           ? (data as { detail: string }).detail
           : null;
       const message =

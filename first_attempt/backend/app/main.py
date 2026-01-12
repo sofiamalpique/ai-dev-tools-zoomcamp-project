@@ -10,14 +10,13 @@ app = FastAPI()
 _cors_origins_env = os.environ.get("CORS_ORIGINS", "").strip()
 if _cors_origins_env:
     cors_origins = [
-        origin.strip()
-        for origin in _cors_origins_env.split(",")
-        if origin.strip()
+        origin.strip() for origin in _cors_origins_env.split(",") if origin.strip()
     ]
 else:
     cors_origins = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "https://ai-dev-tools-zoomcamp-project.vercel.app",
     ]
 
 app.add_middleware(

@@ -87,7 +87,9 @@ def test_create_label_and_transaction_flow(client: TestClient) -> None:
 
 def _mcp_available() -> bool:
     try:
-        response = httpx.get("http://localhost:8001/health", timeout=1.5)
+        response = httpx.get(
+            "https://ai-dev-tools-zoomcamp-project-1.onrender.com/health", timeout=1.5
+        )
         return response.status_code == 200
     except httpx.RequestError:
         return False

@@ -1,6 +1,6 @@
 import calendar
 from datetime import date
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from uuid import UUID
 
 import httpx
@@ -50,9 +50,8 @@ def _is_habit_due(habit: Habit, target_date: date) -> bool:
         return delta_days % (7 * habit.interval) == 0
 
     if habit.unit == "month":
-        month_diff = (
-            (target_date.year - habit.start_date.year) * 12
-            + (target_date.month - habit.start_date.month)
+        month_diff = (target_date.year - habit.start_date.year) * 12 + (
+            target_date.month - habit.start_date.month
         )
         if month_diff % habit.interval != 0:
             return False
@@ -169,9 +168,7 @@ def list_habit_completions(
     db: Session = Depends(get_db),
 ) -> HabitCompletionsOut:
     completed_ids = (
-        db.execute(
-            select(HabitCompletion.habit_id).where(HabitCompletion.date == date)
-        )
+        db.execute(select(HabitCompletion.habit_id).where(HabitCompletion.date == date))
         .scalars()
         .all()
     )
@@ -186,9 +183,7 @@ def list_habits_for_date(
     habits = db.execute(select(Habit).order_by(Habit.name)).scalars().all()
     due_habits = [habit for habit in habits if _is_habit_due(habit, date)]
     completed_ids = set(
-        db.execute(
-            select(HabitCompletion.habit_id).where(HabitCompletion.date == date)
-        )
+        db.execute(select(HabitCompletion.habit_id).where(HabitCompletion.date == date))
         .scalars()
         .all()
     )
@@ -300,6 +295,7 @@ def fetch_weekly_suggestion(summary: WeeklyReviewOut) -> str:
     urls = [
         "http://localhost:8001/suggest-weekly-review",
         "http://mcp_server:8001/suggest-weekly-review",
+        "https://ai-dev-tools-zoomcamp-project-1.onrender.com/suggest-weekly-review",
     ]
     last_error: Exception | None = None
 
