@@ -202,6 +202,52 @@ npm run build
 npm run test --if-present
 ```
 
+## Deployment (Free Tier)
+### Frontend (GitHub Pages)
+1) Push this repo to GitHub.
+2) In GitHub, go to Settings → Pages, and set the source to GitHub Actions.
+3) Add a repository variable named `VITE_API_BASE_URL` with your backend URL
+   (e.g. `https://your-backend.onrender.com`).
+4) The workflow in `.github/workflows/pages.yml` builds
+   `first_attempt/frontend` and deploys `dist/` automatically on `main`.
+5) After it finishes, your site URL is shown in the workflow output (also in
+   Settings → Pages).
+
+Notes:
+- The Vite base path is set via `VITE_BASE_PATH` in the Pages workflow to match
+  the repo name (`/your-repo/`). If you use a custom domain or a user/org page,
+  change `VITE_BASE_PATH` to `/` in `.github/workflows/pages.yml`.
+- Set `VITE_API_BASE_URL` to your backend URL for local builds (see below).
+
+### Backend (Render Free Web Service)
+1) Create a new Web Service on Render from this GitHub repo.
+2) Set the Root Directory to `first_attempt/backend`.
+3) Environment → add variables:
+   - `DATABASE_URL` (Neon connection string).
+   - `MCP_BASE_URL` (optional; only if you deploy MCP separately).
+   - `CORS_ORIGINS` (comma-separated list of allowed origins).
+4) Build Command: `pip install -r requirements.txt`
+5) Start Command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+6) Deploy and note the Render URL (e.g. `https://your-backend.onrender.com`).
+
+Note: CORS origins are configured via `CORS_ORIGINS` in
+`first_attempt/backend/app/main.py`.
+
+### Database (Neon Free Postgres)
+1) Create a free Neon project and database.
+2) Copy the connection string (Postgres URL).
+3) Use it as `DATABASE_URL` in Render.
+
+Required environment variables:
+- Backend (Render): `DATABASE_URL` (required), `MCP_BASE_URL` (optional if
+  hosting MCP), and `CORS_ORIGINS`.
+- Frontend (GitHub Pages build or local): `VITE_API_BASE_URL` pointing to your
+  deployed backend URL (set as a GitHub repo variable for Pages).
+
+Examples:
+- Local dev: `CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173`
+- GitHub Pages: `CORS_ORIGINS=https://<user>.github.io/<repo>`
+
 ## Troubleshooting
 - Port already in use (5173/8000/8001/5432): stop the other process or change
   the port mapping in `first_attempt/docker-compose.yml`.
