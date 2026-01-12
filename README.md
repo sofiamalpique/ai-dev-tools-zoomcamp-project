@@ -1,6 +1,7 @@
 # AI Dev Tools Zoomcamp — Project
 
 This repository contains my project submission(s) for the AI Dev Tools Zoomcamp course.
+Full run instructions live in `first_attempt/README.md`.
 
 ## Repository structure
 
