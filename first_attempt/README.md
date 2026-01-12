@@ -150,6 +150,27 @@ pytest
 
 Frontend tests: not implemented yet.
 
+## CI
+GitHub Actions runs on push and pull request and executes:
+- Backend: install `requirements.txt` + `requirements-dev.txt`, then `pytest`.
+- Frontend: `npm ci`, `npm run build`, and `npm run test --if-present`.
+
+Run the same checks locally:
+```bash
+# Backend
+cd first_attempt/backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt -r requirements-dev.txt
+pytest
+
+# Frontend
+cd first_attempt/frontend
+npm ci
+npm run build
+npm run test --if-present
+```
+
 ## Troubleshooting
 - Port already in use (5173/8000/8001/5432): stop the other process or change
   the port mapping in `first_attempt/docker-compose.yml`.
@@ -165,8 +186,6 @@ Frontend tests: not implemented yet.
   `http://mcp_server:8001`.
 
 ## Roadmap (next improvements)
-- Add CI workflow for backend tests and frontend build.
-- Add dependency lockfiles for reproducibility.
 - Add environment-based API base URL for the frontend.
 - Add deployment instructions and production configuration.
 - Add frontend tests and basic authentication.
