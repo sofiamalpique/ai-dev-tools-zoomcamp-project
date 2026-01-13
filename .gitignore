@@ -21,3 +21,6 @@
 # Env files
 .env
 **/.env
+
+
+.DS_Store
