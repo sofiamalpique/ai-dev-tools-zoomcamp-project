@@ -1,11 +1,14 @@
 const DEFAULT_API_BASE_URL = "http://localhost:8000";
+const DEFAULT_MCP_BASE_URL = "http://localhost:8001";
 
 const normalizeBaseUrl = (baseUrl: string) => baseUrl.replace(/\/+$/, "");
 
 export const API_BASE_URL = normalizeBaseUrl(
   import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL
 );
-export const MCP_BASE_URL = normalizeBaseUrl("https://ai-dev-tools-zoomcamp-project-1.onrender.com/");
+export const MCP_BASE_URL = normalizeBaseUrl(
+  import.meta.env.VITE_MCP_BASE_URL ?? DEFAULT_MCP_BASE_URL
+);
 
 type JsonValue = unknown;
 

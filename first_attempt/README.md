@@ -109,7 +109,9 @@ docker compose up --build
 ```
 
 Frontend API base defaults to `http://localhost:8000`. If the backend runs
-elsewhere, set `VITE_API_BASE_URL` before starting the frontend.
+elsewhere, set `VITE_API_BASE_URL` before starting the frontend. The MCP base
+defaults to `http://localhost:8001`; set `VITE_MCP_BASE_URL` if MCP runs
+elsewhere.
 
 Run database migrations (first-time or after schema changes):
 ```bash
@@ -141,9 +143,9 @@ npm install
 npm run dev
 ```
 
-Optional: override the API base before starting the dev server:
+Optional: override the API and MCP bases before starting the dev server:
 ```bash
-VITE_API_BASE_URL=http://localhost:8000 npm run dev
+VITE_API_BASE_URL=http://localhost:8000 VITE_MCP_BASE_URL=http://localhost:8001 npm run dev
 ```
 
 ## Testing
@@ -206,8 +208,10 @@ npm run test --if-present
 ### Frontend (GitHub Pages)
 1) Push this repo to GitHub.
 2) In GitHub, go to Settings → Pages, and set the source to GitHub Actions.
-3) Add a repository variable named `VITE_API_BASE_URL` with your backend URL
-   (e.g. `https://your-backend.onrender.com`).
+3) Add repository variables named `VITE_API_BASE_URL` and
+   `VITE_MCP_BASE_URL` with your backend and MCP URLs (e.g.
+   `https://your-backend.onrender.com` and
+   `https://your-mcp.onrender.com`).
 4) The workflow in `.github/workflows/pages.yml` builds
    `first_attempt/frontend` and deploys `dist/` automatically on `main`.
 5) After it finishes, your site URL is shown in the workflow output (also in
@@ -217,7 +221,8 @@ Notes:
 - The Vite base path is set via `VITE_BASE_PATH` in the Pages workflow to match
   the repo name (`/your-repo/`). If you use a custom domain or a user/org page,
   change `VITE_BASE_PATH` to `/` in `.github/workflows/pages.yml`.
-- Set `VITE_API_BASE_URL` to your backend URL for local builds (see below).
+- Set `VITE_API_BASE_URL` and `VITE_MCP_BASE_URL` to your backend and MCP URLs
+  for local builds (see below).
 
 ### Backend (Render Free Web Service)
 1) Create a new Web Service on Render from this GitHub repo.
@@ -241,12 +246,14 @@ Note: CORS origins are configured via `CORS_ORIGINS` in
 Required environment variables:
 - Backend (Render): `DATABASE_URL` (required), `MCP_BASE_URL` (optional if
   hosting MCP), and `CORS_ORIGINS`.
-- Frontend (GitHub Pages build or local): `VITE_API_BASE_URL` pointing to your
-  deployed backend URL (set as a GitHub repo variable for Pages).
+- Frontend (GitHub Pages build or local): `VITE_API_BASE_URL` and
+  `VITE_MCP_BASE_URL` pointing to your deployed backend and MCP URLs (set as
+  GitHub repo variables for Pages).
 
 Examples:
 - Local dev: `CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173`
 - GitHub Pages: `CORS_ORIGINS=https://<user>.github.io/<repo>`
+- Frontend env: `VITE_MCP_BASE_URL=https://your-mcp.onrender.com`
 
 ## Troubleshooting
 - Port already in use (5173/8000/8001/5432): stop the other process or change
