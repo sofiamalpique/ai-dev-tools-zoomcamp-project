@@ -113,10 +113,7 @@ elsewhere, set `VITE_API_BASE_URL` before starting the frontend. The MCP base
 defaults to `http://localhost:8001`; set `VITE_MCP_BASE_URL` if MCP runs
 elsewhere.
 
-Run database migrations (first-time or after schema changes):
-```bash
-docker compose exec backend alembic upgrade head
-```
+Database migrations run automatically when the backend container starts.
 
 Open:
 - `http://localhost:5173` (frontend UI)
