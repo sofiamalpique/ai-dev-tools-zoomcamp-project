@@ -18,16 +18,19 @@ their personal operations.
 - Generates weekly review totals and a suggestion via the MCP service.
 
 ## Demo
-- Screenshot: Overview dashboard (placeholder)
-- Screenshot: Habits + weekly review (placeholder)
-- GIF: Create label + transaction + weekly review (placeholder)
+- Screenshot: `first_attempt/screenshots/application.png`
+- Screenshot: `first_attempt/screenshots/frontend.png`
+- Screenshot: `first_attempt/screenshots/backend.png`
+- Screenshot: `first_attempt/screenshots/mcp-server.png`
+- Screenshot: `first_attempt/screenshots/database.png`
 
 How to record a quick demo:
 1) Start the stack with Docker (see "How to run (Docker)").
 2) Open `http://localhost:5173` and show both health cards.
-3) Create a label, then add a transaction for that label.
-4) Run a weekly review and show the suggested advice.
-5) Create a habit, toggle it complete for today, and show the due list.
+3) Optionally open `https://ai-dev-tools-zoomcamp-project.vercel.app/` to show the deployed frontend.
+4) Create a label, then add a transaction for that label.
+5) Run a weekly review and show the suggested advice.
+6) Create a habit, toggle it complete for today, and show the due list.
 
 ## Architecture
 Services in `first_attempt/docker-compose.yml`:
