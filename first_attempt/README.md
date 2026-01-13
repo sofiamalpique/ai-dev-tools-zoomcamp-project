@@ -205,24 +205,15 @@ npm run test --if-present
 ```
 
 ## Deployment (Free Tier)
-### Frontend (GitHub Pages)
+### Frontend (Vercel)
 1) Push this repo to GitHub.
-2) In GitHub, go to Settings → Pages, and set the source to GitHub Actions.
-3) Add repository variables named `VITE_API_BASE_URL` and
-   `VITE_MCP_BASE_URL` with your backend and MCP URLs (e.g.
-   `https://your-backend.onrender.com` and
-   `https://your-mcp.onrender.com`).
-4) The workflow in `.github/workflows/pages.yml` builds
-   `first_attempt/frontend` and deploys `dist/` automatically on `main`.
-5) After it finishes, your site URL is shown in the workflow output (also in
-   Settings → Pages).
-
-Notes:
-- The Vite base path is set via `VITE_BASE_PATH` in the Pages workflow to match
-  the repo name (`/your-repo/`). If you use a custom domain or a user/org page,
-  change `VITE_BASE_PATH` to `/` in `.github/workflows/pages.yml`.
-- Set `VITE_API_BASE_URL` and `VITE_MCP_BASE_URL` to your backend and MCP URLs
-  for local builds (see below).
+2) In Vercel, create a new project from the repo.
+3) Set the Root Directory to `first_attempt/frontend`.
+4) Set the Build Command to `npm run build`.
+5) Add Environment Variables:
+   - `VITE_API_BASE_URL` (backend URL, e.g. `https://your-backend.onrender.com`)
+   - `VITE_MCP_BASE_URL` (MCP URL, e.g. `https://your-mcp.onrender.com`)
+6) Deploy. If you change env vars later, trigger a redeploy to apply them.
 
 ### Backend (Render Free Web Service)
 1) Create a new Web Service on Render from this GitHub repo.
@@ -246,13 +237,12 @@ Note: CORS origins are configured via `CORS_ORIGINS` in
 Required environment variables:
 - Backend (Render): `DATABASE_URL` (required), `MCP_BASE_URL` (optional if
   hosting MCP), and `CORS_ORIGINS`.
-- Frontend (GitHub Pages build or local): `VITE_API_BASE_URL` and
-  `VITE_MCP_BASE_URL` pointing to your deployed backend and MCP URLs (set as
-  GitHub repo variables for Pages).
+- Frontend (Vercel build or local): `VITE_API_BASE_URL` and
+  `VITE_MCP_BASE_URL` pointing to your deployed backend and MCP URLs.
 
 Examples:
 - Local dev: `CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173`
-- GitHub Pages: `CORS_ORIGINS=https://<user>.github.io/<repo>`
+- Vercel: `CORS_ORIGINS=https://<your-vercel-app>.vercel.app`
 - Frontend env: `VITE_MCP_BASE_URL=https://your-mcp.onrender.com`
 
 ## Troubleshooting
@@ -270,6 +260,5 @@ Examples:
   `http://mcp_server:8001`.
 
 ## Roadmap (next improvements)
-- Add environment-based API base URL for the frontend.
 - Add deployment instructions and production configuration.
 - Add frontend tests and basic authentication.
