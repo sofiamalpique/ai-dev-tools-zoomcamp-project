@@ -202,6 +202,28 @@ npm run test --if-present
 ```
 
 ## Deployment (Free Tier)
+### Live deployment URLs (for grading)
+- Frontend (Vercel): https://ai-dev-tools-zoomcamp-project.vercel.app/
+- Backend API (Render): https://ai-dev-tools-zoomcamp-project.onrender.com
+- Backend health: https://ai-dev-tools-zoomcamp-project.onrender.com/health
+- MCP server (Render): https://ai-dev-tools-zoomcamp-project-1.onrender.com
+- MCP health: https://ai-dev-tools-zoomcamp-project-1.onrender.com/health
+
+### Proof (curl)
+```bash
+curl https://ai-dev-tools-zoomcamp-project.onrender.com/health
+curl https://ai-dev-tools-zoomcamp-project-1.onrender.com/health
+curl "https://ai-dev-tools-zoomcamp-project.onrender.com/api/reviews/weekly/suggestion?start_date=2024-01-01&end_date=2024-01-07"
+```
+
+### Proof (screenshots)
+Screenshots are in `first_attempt/screenshots/`:
+- `first_attempt/screenshots/application.png`
+- `first_attempt/screenshots/frontend.png`
+- `first_attempt/screenshots/backend.png`
+- `first_attempt/screenshots/mcp-server.png`
+- `first_attempt/screenshots/database.png`
+
 ### Frontend (Vercel)
 1) Push this repo to GitHub.
 2) In Vercel, create a new project from the repo.
